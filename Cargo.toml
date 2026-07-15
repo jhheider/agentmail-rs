@@ -2,8 +2,8 @@
 name = "agentmail"
 version = "0.1.0"
 edition = "2024"
-# MSRV: verify with `cargo msrv find` before the first publish, then pin here.
-# (Left unset for now so CI on stable is the only promise.)
+# Floor set by edition 2024 (1.85) and icu/idna transitive deps (1.86).
+rust-version = "1.86"
 authors = ["Jacob Heider <jhheider@gmail.com>"]
 description = "Unofficial typed Rust client for AgentMail (agentmail.to), the email API for agents."
 license = "MIT OR Apache-2.0"
@@ -20,6 +20,7 @@ categories = ["api-bindings", "email", "web-programming"]
 reqwest = { version = "0.13", default-features = false, features = [
     "rustls-no-provider",
     "json",
+    "query",
 ] }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
 serde = { version = "1", features = ["derive"] }
@@ -28,3 +29,4 @@ thiserror = "2"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+wiremock = "0.6"

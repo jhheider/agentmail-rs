@@ -1,0 +1,20 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["**.md", "LICENSE*", ".gitignore"]
+  pull_request:
+    paths-ignore: ["**.md", "LICENSE*", ".gitignore"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    # Default 3-OS matrix (Linux/macOS/Windows) on hosted runners.
+    uses: jhheider/rust-ci/.github/workflows/ci.yml@v1
+    with:
+      coverage: true
+    secrets: inherit

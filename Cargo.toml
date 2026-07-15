@@ -1,0 +1,30 @@
+[package]
+name = "agentmail"
+version = "0.1.0"
+edition = "2024"
+# MSRV: verify with `cargo msrv find` before the first publish, then pin here.
+# (Left unset for now so CI on stable is the only promise.)
+authors = ["Jacob Heider <jhheider@gmail.com>"]
+description = "Unofficial typed Rust client for AgentMail (agentmail.to) — the email API for agents."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/jhheider/agentmail-rs"
+homepage = "https://github.com/jhheider/agentmail-rs"
+documentation = "https://docs.rs/agentmail"
+readme = "README.md"
+keywords = ["email", "agentmail", "api", "client", "agents"]
+categories = ["api-bindings", "email", "web-programming"]
+
+[dependencies]
+# rustls with the ring provider, no aws-lc-rs / cmake C build. The client
+# installs ring as the process default at construction (see Client::new).
+reqwest = { version = "0.13", default-features = false, features = [
+    "rustls-no-provider",
+    "json",
+] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }

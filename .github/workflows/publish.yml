@@ -1,0 +1,25 @@
+name: Publish
+
+# Library crate: rust-ci's release.yml is binary-oriented (requires bin-name +
+# build targets), so publishing is this small, manual, dispatch-only job. It
+# NEVER runs on its own — trigger it deliberately, and it defaults to a dry run.
+# Needs a CARGO_REGISTRY_TOKEN secret before a real publish.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (validate + package, do not upload)"
+        type: boolean
+        default: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish ${{ inputs.dry_run && '--dry-run' || '' }}

@@ -11,18 +11,18 @@
 > [OpenAPI spec](https://docs.agentmail.to/openapi.json) (API v0), which may
 > change; pin a version and read the changelog.
 
-A typed, `async` client for [AgentMail](https://agentmail.to) — the email API
+A typed, `async` client for [AgentMail](https://agentmail.to), the email API
 for agents. Coverage is the transactional core:
 
-- **Inboxes** — create / list / get / delete (free plan: 3 inboxes,
+- **Inboxes**: create / list / get / delete (free plan: 3 inboxes,
   3k emails/month, `@agentmail.to` addresses)
-- **Messages** — send / list / get
-- **Webhooks** — create / list / delete (e.g. `message.received`)
+- **Messages**: send / list / get
+- **Webhooks**: create / list / delete (e.g. `message.received`)
 
 Deliberately small: `reqwest` + `serde` + `thiserror`, with permissive
 deserialization (unknown fields are ignored) so API additions don't break you.
-TLS is **rustls with the ring provider** — no OpenSSL, no aws-lc-rs, no C
-toolchain. The client installs ring as the process default at construction; if
+TLS is **rustls with the ring provider** (no OpenSSL, no aws-lc-rs, no C
+toolchain). The client installs ring as the process default at construction; if
 your application already installs a crypto provider, that choice is respected.
 
 ## Install

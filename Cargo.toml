@@ -5,7 +5,7 @@ edition = "2024"
 # MSRV: verify with `cargo msrv find` before the first publish, then pin here.
 # (Left unset for now so CI on stable is the only promise.)
 authors = ["Jacob Heider <jhheider@gmail.com>"]
-description = "Unofficial typed Rust client for AgentMail (agentmail.to) — the email API for agents."
+description = "Unofficial typed Rust client for AgentMail (agentmail.to), the email API for agents."
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/jhheider/agentmail-rs"
 homepage = "https://github.com/jhheider/agentmail-rs"

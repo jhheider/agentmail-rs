@@ -5,7 +5,7 @@ All notable changes to this crate are documented here. The format follows
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 API v0 upstream is pre-1.0; expect breaking releases while it settles.
 
-## [0.1.0] - Unreleased
+## [0.1.0] - 2026-07-15
 
 Initial release.
 

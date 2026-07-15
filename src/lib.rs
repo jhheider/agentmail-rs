@@ -32,34 +32,67 @@
 //! # Ok(()) }
 //! ```
 
+#![warn(missing_docs)]
+
 use serde::{Deserialize, Serialize};
 
 /// The production API host. Override with `Client::new(key, base_url)` for
 /// the EU region (`https://api.agentmail.eu`) or a mock server.
 pub const DEFAULT_BASE_URL: &str = "https://api.agentmail.to";
 
+/// The per-request timeout applied by [`Client::new`] (connect + response).
+pub const DEFAULT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
+
+/// Everything that can go wrong talking to AgentMail.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    /// [`Client::from_env`] found no `AGENTMAIL_API_KEY`.
     #[error("AGENTMAIL_API_KEY is not set")]
     MissingApiKey,
+    /// The request never completed: DNS, TLS, connect, or the
+    /// [`DEFAULT_TIMEOUT`] elapsed.
     #[error("transport error: {0}")]
     Transport(#[from] reqwest::Error),
     /// A non-2xx answer from the API, with whatever body it sent.
     #[error("AgentMail answered {status}: {body}")]
     Api {
+        /// The HTTP status the API answered with.
         status: reqwest::StatusCode,
+        /// The response body, verbatim (AgentMail sends JSON error details).
+        body: String,
+    },
+    /// A 2xx answer whose body didn't decode into the expected type - either
+    /// a bug in this crate's wire shapes or a breaking change in the API.
+    #[error("undecodable AgentMail response ({reason}): {body}")]
+    Decode {
+        /// Why deserialization failed.
+        reason: String,
+        /// The response body, verbatim.
         body: String,
     },
 }
 
+/// An authenticated handle on the AgentMail API. Cheap to clone-ish (it owns
+/// a pooled `reqwest::Client`); construct once and share by reference.
 pub struct Client {
     http: reqwest::Client,
     base_url: String,
     api_key: String,
 }
 
+// Manual impl so an accidental `{:?}` never prints the API key.
+impl std::fmt::Debug for Client {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Client")
+            .field("base_url", &self.base_url)
+            .field("api_key", &"[redacted]")
+            .finish_non_exhaustive()
+    }
+}
+
 impl Client {
-    /// A client against `base_url` (see [`DEFAULT_BASE_URL`]).
+    /// A client against `base_url` (see [`DEFAULT_BASE_URL`]), with a
+    /// [`DEFAULT_TIMEOUT`] on every request.
     pub fn new(api_key: impl Into<String>, base_url: impl Into<String>) -> Self {
         // We build reqwest with rustls but no bundled crypto provider, so install
         // `ring` as the process default (no aws-lc-rs / cmake). This is a global,
@@ -67,7 +100,12 @@ impl Client {
         // a provider, so it never overrides a deliberate choice.
         let _ = rustls::crypto::ring::default_provider().install_default();
         Client {
-            http: reqwest::Client::new(),
+            http: reqwest::Client::builder()
+                .timeout(DEFAULT_TIMEOUT)
+                .build()
+                // Infallible for these options; build() can only fail on
+                // TLS-backend misconfiguration.
+                .expect("reqwest client"),
             base_url: base_url.into().trim_end_matches('/').to_string(),
             api_key: api_key.into(),
         }
@@ -85,12 +123,16 @@ impl Client {
         &self,
         method: reqwest::Method,
         path: &str,
+        query: &[(&str, String)],
         body: Option<serde_json::Value>,
     ) -> Result<T, Error> {
         let mut req = self
             .http
             .request(method, format!("{}{path}", self.base_url))
             .bearer_auth(&self.api_key);
+        if !query.is_empty() {
+            req = req.query(query);
+        }
         if let Some(body) = body {
             req = req.json(&body);
         }
@@ -107,9 +149,9 @@ impl Client {
         } else {
             &text
         };
-        serde_json::from_str(text).map_err(|e| Error::Api {
-            status,
-            body: format!("undecodable body ({e}): {text}"),
+        serde_json::from_str(text).map_err(|e| Error::Decode {
+            reason: e.to_string(),
+            body: text.to_string(),
         })
     }
 
@@ -121,14 +163,21 @@ impl Client {
         self.request(
             reqwest::Method::POST,
             "/v0/inboxes",
+            &[],
             Some(serde_json::to_value(inbox).expect("serializable")),
         )
         .await
     }
 
-    /// GET /v0/inboxes
+    /// GET /v0/inboxes (first page; see [`Client::list_inboxes_page`]).
     pub async fn list_inboxes(&self) -> Result<InboxList, Error> {
-        self.request(reqwest::Method::GET, "/v0/inboxes", None)
+        self.list_inboxes_page(Page::default()).await
+    }
+
+    /// GET /v0/inboxes with pagination. Feed [`InboxList::next_page_token`]
+    /// back in as [`Page::page_token`] until it comes back `None`.
+    pub async fn list_inboxes_page(&self, page: Page) -> Result<InboxList, Error> {
+        self.request(reqwest::Method::GET, "/v0/inboxes", &page.query(), None)
             .await
     }
 
@@ -137,6 +186,7 @@ impl Client {
         self.request(
             reqwest::Method::GET,
             &format!("/v0/inboxes/{}", urlish(inbox_id)),
+            &[],
             None,
         )
         .await
@@ -147,6 +197,7 @@ impl Client {
         self.request(
             reqwest::Method::DELETE,
             &format!("/v0/inboxes/{}", urlish(inbox_id)),
+            &[],
             None,
         )
         .await
@@ -163,16 +214,30 @@ impl Client {
         self.request(
             reqwest::Method::POST,
             &format!("/v0/inboxes/{}/messages/send", urlish(inbox_id)),
+            &[],
             Some(serde_json::to_value(message).expect("serializable")),
         )
         .await
     }
 
-    /// GET /v0/inboxes/{inbox_id}/messages
+    /// GET /v0/inboxes/{inbox_id}/messages (first page; see
+    /// [`Client::list_messages_page`]).
     pub async fn list_messages(&self, inbox_id: &str) -> Result<MessageList, Error> {
+        self.list_messages_page(inbox_id, Page::default()).await
+    }
+
+    /// GET /v0/inboxes/{inbox_id}/messages with pagination. Feed
+    /// [`MessageList::next_page_token`] back in as [`Page::page_token`]
+    /// until it comes back `None`.
+    pub async fn list_messages_page(
+        &self,
+        inbox_id: &str,
+        page: Page,
+    ) -> Result<MessageList, Error> {
         self.request(
             reqwest::Method::GET,
             &format!("/v0/inboxes/{}/messages", urlish(inbox_id)),
+            &page.query(),
             None,
         )
         .await
@@ -187,6 +252,7 @@ impl Client {
                 urlish(inbox_id),
                 urlish(message_id),
             ),
+            &[],
             None,
         )
         .await
@@ -201,14 +267,21 @@ impl Client {
         self.request(
             reqwest::Method::POST,
             "/v0/webhooks",
+            &[],
             Some(serde_json::to_value(webhook).expect("serializable")),
         )
         .await
     }
 
-    /// GET /v0/webhooks
+    /// GET /v0/webhooks (first page; see [`Client::list_webhooks_page`]).
     pub async fn list_webhooks(&self) -> Result<WebhookList, Error> {
-        self.request(reqwest::Method::GET, "/v0/webhooks", None)
+        self.list_webhooks_page(Page::default()).await
+    }
+
+    /// GET /v0/webhooks with pagination. Feed [`WebhookList::next_page_token`]
+    /// back in as [`Page::page_token`] until it comes back `None`.
+    pub async fn list_webhooks_page(&self, page: Page) -> Result<WebhookList, Error> {
+        self.request(reqwest::Method::GET, "/v0/webhooks", &page.query(), None)
             .await
     }
 
@@ -217,6 +290,7 @@ impl Client {
         self.request(
             reqwest::Method::DELETE,
             &format!("/v0/webhooks/{}", urlish(webhook_id)),
+            &[],
             None,
         )
         .await
@@ -224,79 +298,133 @@ impl Client {
 }
 
 /// Minimal percent-encoding for path segments (ids are URL-safe in practice;
-/// this keeps a stray space or slash from corrupting the path).
+/// this keeps a stray space, slash, or non-ASCII char from corrupting the
+/// path). Encodes per UTF-8 byte, as percent-encoding requires.
 fn urlish(segment: &str) -> String {
     segment
-        .chars()
-        .map(|c| match c {
-            'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' | '.' | '@' | '+' => c.to_string(),
-            other => format!("%{:02X}", other as u32),
+        .bytes()
+        .map(|b| match b {
+            b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'@' | b'+' => {
+                (b as char).to_string()
+            }
+            other => format!("%{other:02X}"),
         })
         .collect()
 }
 
 // ─── Types (wire shapes from the OpenAPI spec) ────────────────────────────────
 
+/// Pagination controls for the `list_*_page` calls. `Default` is the API's
+/// own defaults (first page, server-chosen page size).
+#[derive(Clone, Debug, Default)]
+pub struct Page {
+    /// Maximum items per page (the API caps this server-side).
+    pub limit: Option<u32>,
+    /// Cursor from a previous response's `next_page_token`.
+    pub page_token: Option<String>,
+}
+
+impl Page {
+    fn query(&self) -> Vec<(&'static str, String)> {
+        let mut q = Vec::new();
+        if let Some(limit) = self.limit {
+            q.push(("limit", limit.to_string()));
+        }
+        if let Some(token) = &self.page_token {
+            q.push(("page_token", token.clone()));
+        }
+        q
+    }
+}
+
+/// Request body for [`Client::create_inbox`]. All fields optional; the API
+/// generates a username when none is given.
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct CreateInbox {
+    /// Local part of the address; random when omitted.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub username: Option<String>,
     /// A verified domain (or subdomain of one); defaults to `agentmail.to`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub domain: Option<String>,
+    /// Human-readable sender name shown in email clients.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display_name: Option<String>,
+    /// Your own idempotency/reference id for this inbox.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub client_id: Option<String>,
+    /// Arbitrary JSON stored alongside the inbox.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<serde_json::Value>,
 }
 
+/// An agent-owned inbox, as the API returns it.
 #[derive(Clone, Debug, Deserialize)]
 pub struct Inbox {
+    /// Unique id, used in every message call.
     pub inbox_id: String,
     /// The address itself, e.g. `my-agent@agentmail.to`.
     pub email: String,
+    /// Human-readable sender name, when set.
     #[serde(default)]
     pub display_name: Option<String>,
+    /// Owning pod, when the account uses pods.
     #[serde(default)]
     pub pod_id: Option<String>,
+    /// Your reference id from creation, when set.
     #[serde(default)]
     pub client_id: Option<String>,
+    /// RFC 3339 creation timestamp.
     #[serde(default)]
     pub created_at: Option<String>,
 }
 
+/// One page of inboxes from [`Client::list_inboxes_page`].
 #[derive(Clone, Debug, Deserialize)]
 pub struct InboxList {
+    /// Total inboxes in the account (not just this page).
     pub count: u64,
+    /// This page of inboxes.
     #[serde(default)]
     pub inboxes: Vec<Inbox>,
+    /// Cursor for the next page; `None` on the last page.
     #[serde(default)]
     pub next_page_token: Option<String>,
 }
 
+/// Request body for [`Client::send_message`]. At least one recipient in `to`
+/// and one of `text`/`html` are required by the API.
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct SendMessage {
+    /// Primary recipients.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub to: Vec<String>,
+    /// Carbon-copy recipients.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub cc: Vec<String>,
+    /// Blind-carbon-copy recipients.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub bcc: Vec<String>,
+    /// Subject line.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub subject: Option<String>,
+    /// Plain-text body.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub text: Option<String>,
+    /// HTML body (send both for multipart).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub html: Option<String>,
+    /// Labels to attach to the sent message.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub labels: Vec<String>,
 }
 
+/// The API's acknowledgement of a send.
 #[derive(Clone, Debug, Deserialize)]
 pub struct SentMessage {
+    /// Id of the message just sent.
     pub message_id: String,
+    /// Thread the message was filed under.
     pub thread_id: String,
 }
 
@@ -304,68 +432,97 @@ pub struct SentMessage {
 /// get-message shape; every non-id field defaults so both parse.
 #[derive(Clone, Debug, Deserialize)]
 pub struct Message {
+    /// Unique id within the inbox.
     pub message_id: String,
+    /// Inbox the message belongs to.
     #[serde(default)]
     pub inbox_id: Option<String>,
+    /// Conversation thread id.
     #[serde(default)]
     pub thread_id: Option<String>,
+    /// Sender address.
     #[serde(default)]
     pub from: Option<String>,
+    /// Recipient addresses.
     #[serde(default)]
     pub to: Vec<String>,
+    /// Subject line.
     #[serde(default)]
     pub subject: Option<String>,
+    /// Short plain-text excerpt (list responses).
     #[serde(default)]
     pub preview: Option<String>,
+    /// Full plain-text body (get responses).
     #[serde(default)]
     pub text: Option<String>,
+    /// Full HTML body (get responses).
     #[serde(default)]
     pub html: Option<String>,
+    /// Labels on the message (e.g. `received`, `unread`).
     #[serde(default)]
     pub labels: Vec<String>,
+    /// RFC 3339 send/receive timestamp.
     #[serde(default)]
     pub timestamp: Option<String>,
 }
 
+/// One page of messages from [`Client::list_messages_page`].
 #[derive(Clone, Debug, Deserialize)]
 pub struct MessageList {
+    /// Total messages in the inbox (not just this page).
     pub count: u64,
+    /// This page of messages.
     #[serde(default)]
     pub messages: Vec<Message>,
+    /// Cursor for the next page; `None` on the last page.
     #[serde(default)]
     pub next_page_token: Option<String>,
 }
 
+/// Request body for [`Client::create_webhook`].
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct CreateWebhook {
+    /// HTTPS endpoint to deliver events to.
     pub url: String,
     /// e.g. `["message.received"]`.
     pub event_types: Vec<String>,
+    /// Limit delivery to these inboxes; empty means all.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub inbox_ids: Vec<String>,
+    /// Your own idempotency/reference id for this webhook.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub client_id: Option<String>,
 }
 
+/// A webhook subscription, as the API returns it.
 #[derive(Clone, Debug, Deserialize)]
 pub struct Webhook {
+    /// Unique id, used to delete the subscription.
     pub webhook_id: String,
+    /// The subscribed HTTPS endpoint.
     pub url: String,
     /// Signing secret, returned once, on creation.
     #[serde(default)]
     pub secret: Option<String>,
+    /// Subscribed event types.
     #[serde(default)]
     pub event_types: Vec<String>,
+    /// Inboxes the subscription is limited to; empty means all.
     #[serde(default)]
     pub inbox_ids: Vec<String>,
+    /// Whether the subscription currently delivers.
     pub enabled: bool,
 }
 
+/// One page of webhooks from [`Client::list_webhooks_page`].
 #[derive(Clone, Debug, Deserialize)]
 pub struct WebhookList {
+    /// Total webhooks in the account (not just this page).
     pub count: u64,
+    /// This page of webhooks.
     #[serde(default)]
     pub webhooks: Vec<Webhook>,
+    /// Cursor for the next page; `None` on the last page.
     #[serde(default)]
     pub next_page_token: Option<String>,
 }
@@ -412,5 +569,25 @@ mod tests {
     fn path_segments_stay_paths() {
         assert_eq!(urlish("ib_abc-123.x@y+z"), "ib_abc-123.x@y+z");
         assert_eq!(urlish("a/b c"), "a%2Fb%20c");
+        // Non-ASCII encodes per UTF-8 byte, not per code point.
+        assert_eq!(urlish("café"), "caf%C3%A9");
+        assert_eq!(urlish("😀"), "%F0%9F%98%80");
+    }
+
+    #[test]
+    fn page_query_pairs() {
+        assert!(Page::default().query().is_empty());
+        let q = Page {
+            limit: Some(10),
+            page_token: Some("tok".into()),
+        }
+        .query();
+        assert_eq!(
+            q,
+            vec![
+                ("limit", "10".to_string()),
+                ("page_token", "tok".to_string())
+            ],
+        );
     }
 }

@@ -1,5 +1,5 @@
 [package]
-name = "agentmail"
+name = "agentmail-rs"
 version = "0.1.0"
 edition = "2024"
 # Floor set by edition 2024 (1.85) and icu/idna transitive deps (1.86).
@@ -9,10 +9,15 @@ description = "Unofficial typed Rust client for AgentMail (agentmail.to), the em
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/jhheider/agentmail-rs"
 homepage = "https://github.com/jhheider/agentmail-rs"
-documentation = "https://docs.rs/agentmail"
+documentation = "https://docs.rs/agentmail-rs"
 readme = "README.md"
 keywords = ["email", "agentmail", "api", "client", "agents"]
 categories = ["api-bindings", "email", "web-programming"]
+
+# Published as agentmail-rs (the bare `agentmail` name is taken on crates.io by
+# an unrelated project), but imported as `agentmail`.
+[lib]
+name = "agentmail"
 
 [dependencies]
 # rustls with the ring provider, no aws-lc-rs / cmake C build. The client

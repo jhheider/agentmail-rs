@@ -1,7 +1,7 @@
-# agentmail
+# agentmail-rs
 
-[![crates.io](https://img.shields.io/crates/v/agentmail.svg)](https://crates.io/crates/agentmail)
-[![docs.rs](https://img.shields.io/docsrs/agentmail)](https://docs.rs/agentmail)
+[![crates.io](https://img.shields.io/crates/v/agentmail-rs.svg)](https://crates.io/crates/agentmail-rs)
+[![docs.rs](https://img.shields.io/docsrs/agentmail-rs)](https://docs.rs/agentmail-rs)
 
 > **Unofficial.** This is a community Rust client, **not affiliated with or
 > endorsed by AgentMail**. AgentMail ships official
@@ -30,8 +30,11 @@ crypto provider, that choice is respected.
 ## Install
 
 ```sh
-cargo add agentmail
+cargo add agentmail-rs
 ```
+
+The crate publishes as `agentmail-rs` (the bare `agentmail` name was taken) but
+imports as `agentmail`.
 
 ## Usage
 

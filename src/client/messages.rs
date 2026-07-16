@@ -180,4 +180,94 @@ impl Client {
         )
         .await
     }
+
+    /// POST /v0/inboxes/{inbox_id}/messages/{message_id}/forward, forward a
+    /// message. Reuses [`SendMessage`] for the new recipients and any added
+    /// body.
+    pub async fn forward_message(
+        &self,
+        inbox_id: &str,
+        message_id: &str,
+        message: SendMessage,
+    ) -> Result<SentMessage, Error> {
+        self.request(
+            reqwest::Method::POST,
+            &format!(
+                "/v0/inboxes/{}/messages/{}/forward",
+                urlish(inbox_id),
+                urlish(message_id),
+            ),
+            &[],
+            Some(&message),
+        )
+        .await
+    }
+
+    /// GET /v0/inboxes/{inbox_id}/messages/{message_id}/raw, a presigned URL for
+    /// the message's raw RFC 822 (`.eml`) source. Fetch the bytes with
+    /// [`Client::download_raw`].
+    pub async fn get_raw_message(
+        &self,
+        inbox_id: &str,
+        message_id: &str,
+    ) -> Result<RawMessage, Error> {
+        self.request(
+            reqwest::Method::GET,
+            &format!(
+                "/v0/inboxes/{}/messages/{}/raw",
+                urlish(inbox_id),
+                urlish(message_id),
+            ),
+            &[],
+            None::<&NoBody>,
+        )
+        .await
+    }
+
+    /// Download the raw `.eml` bytes from a [`RawMessage`]'s presigned URL,
+    /// without the API bearer token (the URL is already authenticated).
+    pub async fn download_raw(&self, raw: &RawMessage) -> Result<Vec<u8>, Error> {
+        let resp = self.http.get(&raw.download_url).send().await?;
+        let status = resp.status();
+        let bytes = resp.bytes().await?;
+        if !status.is_success() {
+            return Err(Error::Api {
+                status,
+                body: String::from_utf8_lossy(&bytes).into_owned(),
+            });
+        }
+        Ok(bytes.to_vec())
+    }
+
+    /// POST /v0/inboxes/{inbox_id}/messages/batch-get, fetch many messages by id
+    /// in one call.
+    pub async fn batch_get_messages(
+        &self,
+        inbox_id: &str,
+        message_ids: Vec<String>,
+    ) -> Result<BatchGetMessagesResponse, Error> {
+        self.request(
+            reqwest::Method::POST,
+            &format!("/v0/inboxes/{}/messages/batch-get", urlish(inbox_id)),
+            &[],
+            Some(&BatchGetMessages { message_ids }),
+        )
+        .await
+    }
+
+    /// POST /v0/inboxes/{inbox_id}/messages/batch-update, apply the same label
+    /// changes to many messages at once.
+    pub async fn batch_update_messages(
+        &self,
+        inbox_id: &str,
+        update: BatchUpdateMessages,
+    ) -> Result<BatchUpdateMessagesResponse, Error> {
+        self.request(
+            reqwest::Method::POST,
+            &format!("/v0/inboxes/{}/messages/batch-update", urlish(inbox_id)),
+            &[],
+            Some(&update),
+        )
+        .await
+    }
 }

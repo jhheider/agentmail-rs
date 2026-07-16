@@ -1,7 +1,7 @@
 use crate::util::QueryBuilder;
 use serde::{Deserialize, Serialize};
 
-use super::Attachment;
+use super::{Attachment, SendAttachment};
 
 /// Request body for [`Client::send_message`]. At least one recipient in `to`
 /// and one of `text`/`html` are required by the API.
@@ -28,6 +28,15 @@ pub struct SendMessage {
     /// Labels to attach to the sent message.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub labels: Vec<String>,
+    /// Reply-To addresses.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub reply_to: Vec<String>,
+    /// Files to attach.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub attachments: Vec<SendAttachment>,
+    /// Extra headers to set on the outgoing message.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub headers: Option<serde_json::Value>,
 }
 /// The API's acknowledgement of a send.
 #[derive(Clone, Debug, Deserialize)]
@@ -57,6 +66,69 @@ pub struct ReplyToMessage {
     /// Labels to attach to the reply.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub labels: Vec<String>,
+    /// Files to attach.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub attachments: Vec<SendAttachment>,
+    /// Extra headers to set on the outgoing message.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub headers: Option<serde_json::Value>,
+}
+
+/// The presigned download for a message's raw RFC 822 source, from
+/// [`Client::get_raw_message`]. Fetch the bytes with [`Client::download_raw`].
+#[derive(Clone, Debug, Deserialize)]
+pub struct RawMessage {
+    /// The message id.
+    pub message_id: String,
+    /// Size of the raw message in bytes.
+    #[serde(default)]
+    pub size: Option<u64>,
+    /// Short-lived presigned URL to download the `.eml` bytes.
+    pub download_url: String,
+    /// When `download_url` expires (RFC 3339).
+    #[serde(default)]
+    pub expires_at: Option<String>,
+}
+
+/// Request body for [`Client::batch_get_messages`].
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct BatchGetMessages {
+    /// The message ids to fetch.
+    pub message_ids: Vec<String>,
+}
+
+/// Response to [`Client::batch_get_messages`].
+#[derive(Clone, Debug, Deserialize)]
+pub struct BatchGetMessagesResponse {
+    /// The number of messages returned.
+    pub count: u64,
+    /// The requested messages.
+    #[serde(default)]
+    pub messages: Vec<Message>,
+}
+
+/// Request body for [`Client::batch_update_messages`]: apply the same label
+/// changes to many messages at once.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct BatchUpdateMessages {
+    /// The message ids to update.
+    pub message_ids: Vec<String>,
+    /// Labels to add to each message.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub add_labels: Vec<String>,
+    /// Labels to remove from each message.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub remove_labels: Vec<String>,
+}
+
+/// Response to [`Client::batch_update_messages`].
+#[derive(Clone, Debug, Deserialize)]
+pub struct BatchUpdateMessagesResponse {
+    /// The number of messages updated.
+    pub count: u64,
+    /// The per-message results.
+    #[serde(default)]
+    pub updates: Vec<UpdatedMessage>,
 }
 /// Request body for [`Client::update_message`].
 #[derive(Clone, Debug, Default, Serialize)]

@@ -1,8 +1,9 @@
+mod auth;
 mod inboxes;
 mod messages;
 mod webhooks;
 
-use crate::{types::*, util::urlish, Error};
+use crate::{Error, types::*, util::urlish};
 
 impl super::Client {
     // ── shared request machinery ─────────────────────────────────────────

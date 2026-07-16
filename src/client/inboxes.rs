@@ -1,4 +1,4 @@
-use crate::{types::*, util::urlish, Error, Page};
+use crate::{Error, Page, types::*, util::urlish};
 
 impl super::Client {
     /// POST /v0/inboxes, a new agent-owned email address. Free plans get
@@ -43,6 +43,18 @@ impl super::Client {
             &format!("/v0/inboxes/{}", urlish(inbox_id)),
             &[],
             None,
+        )
+        .await
+    }
+
+    /// PATCH /v0/inboxes/{inbox_id}, update an inbox's display name or
+    /// metadata. Only the fields you set are sent.
+    pub async fn update_inbox(&self, inbox_id: &str, update: UpdateInbox) -> Result<Inbox, Error> {
+        self.request(
+            reqwest::Method::PATCH,
+            &format!("/v0/inboxes/{}", urlish(inbox_id)),
+            &[],
+            Some(serde_json::to_value(update).expect("serializable")),
         )
         .await
     }

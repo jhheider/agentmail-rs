@@ -1,9 +1,11 @@
 mod inboxes;
 mod messages;
+mod thread_search;
 mod webhooks;
 
 pub use inboxes::*;
 pub use messages::*;
+pub use thread_search::*;
 pub use webhooks::*;
 
 // ─── Page ─────────────────────────────────────────────────────────────────

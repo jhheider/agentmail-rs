@@ -1,4 +1,4 @@
-use crate::{types::*, Error, Page};
+use crate::{Error, Page, types::*};
 
 impl super::Client {
     /// POST /v0/webhooks, subscribe an HTTPS endpoint to events

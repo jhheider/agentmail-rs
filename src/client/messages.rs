@@ -1,4 +1,4 @@
-use crate::{types::*, util::urlish, Error, Page};
+use crate::{Error, Page, types::*, util::urlish};
 
 impl super::Client {
     /// POST /v0/inboxes/{inbox_id}/messages/send
@@ -37,11 +37,7 @@ impl super::Client {
     }
 
     /// GET /v0/inboxes/{inbox_id}/messages/{message_id}
-    pub async fn get_message(
-        &self,
-        inbox_id: &str,
-        message_id: &str,
-    ) -> Result<Message, Error> {
+    pub async fn get_message(&self, inbox_id: &str, message_id: &str) -> Result<Message, Error> {
         self.request(
             reqwest::Method::GET,
             &format!(

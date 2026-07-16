@@ -1,3 +1,4 @@
+use crate::client::NoBody;
 use crate::{Client, Error, Page, types::*, util::urlish};
 
 impl Client {
@@ -9,7 +10,7 @@ impl Client {
             reqwest::Method::POST,
             &format!("/v0/inboxes/{}/drafts", urlish(inbox_id)),
             &[],
-            Some(serde_json::to_value(draft).expect("serializable")),
+            Some(&draft),
         )
         .await
     }
@@ -28,7 +29,7 @@ impl Client {
             reqwest::Method::GET,
             &format!("/v0/inboxes/{}/drafts", urlish(inbox_id)),
             &page.query(),
-            None,
+            None::<&NoBody>,
         )
         .await
     }
@@ -43,7 +44,7 @@ impl Client {
                 urlish(draft_id),
             ),
             &[],
-            None,
+            None::<&NoBody>,
         )
         .await
     }
@@ -66,7 +67,7 @@ impl Client {
                 urlish(draft_id),
             ),
             &[],
-            Some(serde_json::to_value(update).expect("serializable")),
+            Some(&update),
         )
         .await
     }
@@ -81,7 +82,7 @@ impl Client {
                 urlish(draft_id),
             ),
             &[],
-            None,
+            None::<&NoBody>,
         )
         .await
     }
@@ -97,7 +98,7 @@ impl Client {
                 urlish(draft_id),
             ),
             &[],
-            None,
+            None::<&NoBody>,
         )
         .await
     }

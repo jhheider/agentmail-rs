@@ -31,7 +31,6 @@ async fn send_message_posts_json_body() {
     assert_eq!(sent.thread_id, "t1");
 }
 
-
 #[tokio::test]
 async fn reply_to_message_posts_json_body() {
     let (server, client) = client().await;
@@ -129,7 +128,6 @@ async fn delete_message_returns_ok() {
 
     client.delete_message("ib_1", "m1").await.unwrap();
 }
-
 
 #[tokio::test]
 async fn message_list_filters_sends_query_params() {

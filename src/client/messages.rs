@@ -1,3 +1,4 @@
+use crate::client::NoBody;
 use crate::{Client, Error, Page, types::*, util::urlish};
 
 impl Client {
@@ -11,7 +12,7 @@ impl Client {
             reqwest::Method::POST,
             &format!("/v0/inboxes/{}/messages/send", urlish(inbox_id)),
             &[],
-            Some(serde_json::to_value(message).expect("serializable")),
+            Some(&message),
         )
         .await
     }
@@ -34,7 +35,7 @@ impl Client {
             reqwest::Method::GET,
             &format!("/v0/inboxes/{}/messages", urlish(inbox_id)),
             &page.query(),
-            None,
+            None::<&NoBody>,
         )
         .await
     }
@@ -49,7 +50,7 @@ impl Client {
                 urlish(message_id),
             ),
             &[],
-            None,
+            None::<&NoBody>,
         )
         .await
     }
@@ -71,7 +72,7 @@ impl Client {
                 urlish(message_id),
             ),
             &[],
-            Some(serde_json::to_value(reply).expect("serializable")),
+            Some(&reply),
         )
         .await
     }
@@ -92,7 +93,7 @@ impl Client {
                 urlish(message_id),
             ),
             &[],
-            Some(serde_json::to_value(reply).expect("serializable")),
+            Some(&reply),
         )
         .await
     }
@@ -115,7 +116,7 @@ impl Client {
                 urlish(message_id),
             ),
             &[],
-            Some(serde_json::to_value(update).expect("serializable")),
+            Some(&update),
         )
         .await
     }
@@ -131,7 +132,7 @@ impl Client {
                 urlish(message_id),
             ),
             &[],
-            None,
+            None::<&NoBody>,
         )
         .await
     }
@@ -149,7 +150,7 @@ impl Client {
             reqwest::Method::GET,
             &format!("/v0/inboxes/{}/messages", urlish(inbox_id)),
             &filters.query(),
-            None,
+            None::<&NoBody>,
         )
         .await
     }
@@ -175,7 +176,7 @@ impl Client {
             reqwest::Method::GET,
             &format!("/v0/inboxes/{}/messages/search", urlish(inbox_id)),
             &q,
-            None,
+            None::<&NoBody>,
         )
         .await
     }

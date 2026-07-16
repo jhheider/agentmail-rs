@@ -1,16 +1,12 @@
+use crate::client::NoBody;
 use crate::{Client, Error, Page, types::*, util::urlish};
 
 impl Client {
     /// POST /v0/inboxes, a new agent-owned email address. Free plans get
     /// `{username}@agentmail.to`; custom domains must be verified first.
     pub async fn create_inbox(&self, inbox: CreateInbox) -> Result<Inbox, Error> {
-        self.request(
-            reqwest::Method::POST,
-            "/v0/inboxes",
-            &[],
-            Some(serde_json::to_value(inbox).expect("serializable")),
-        )
-        .await
+        self.request(reqwest::Method::POST, "/v0/inboxes", &[], Some(&inbox))
+            .await
     }
 
     /// GET /v0/inboxes (first page; see [`Client::list_inboxes_page`]).
@@ -21,8 +17,13 @@ impl Client {
     /// GET /v0/inboxes with pagination. Feed [`InboxList::next_page_token`]
     /// back in as [`Page::page_token`] until it comes back `None`.
     pub async fn list_inboxes_page(&self, page: Page) -> Result<InboxList, Error> {
-        self.request(reqwest::Method::GET, "/v0/inboxes", &page.query(), None)
-            .await
+        self.request(
+            reqwest::Method::GET,
+            "/v0/inboxes",
+            &page.query(),
+            None::<&NoBody>,
+        )
+        .await
     }
 
     /// GET /v0/inboxes/{inbox_id}
@@ -31,7 +32,7 @@ impl Client {
             reqwest::Method::GET,
             &format!("/v0/inboxes/{}", urlish(inbox_id)),
             &[],
-            None,
+            None::<&NoBody>,
         )
         .await
     }
@@ -42,7 +43,7 @@ impl Client {
             reqwest::Method::DELETE,
             &format!("/v0/inboxes/{}", urlish(inbox_id)),
             &[],
-            None,
+            None::<&NoBody>,
         )
         .await
     }

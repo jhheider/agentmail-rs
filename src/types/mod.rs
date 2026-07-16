@@ -1,7 +1,9 @@
+mod domains;
 mod inboxes;
 mod messages;
 mod webhooks;
 
+pub use domains::*;
 pub use inboxes::*;
 pub use messages::*;
 pub use webhooks::*;

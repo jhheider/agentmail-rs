@@ -1,3 +1,4 @@
+mod domains;
 mod inboxes;
 mod messages;
 mod webhooks;

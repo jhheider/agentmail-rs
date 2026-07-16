@@ -4,6 +4,7 @@ mod common;
 mod core;
 mod domains;
 mod drafts;
+mod lists;
 mod messages;
 mod messages_parity;
 mod pods;

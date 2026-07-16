@@ -13,6 +13,7 @@ mod auth;
 mod domains;
 mod drafts;
 mod inboxes;
+mod lists;
 mod messages;
 mod pods;
 mod threads;

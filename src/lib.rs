@@ -3,10 +3,11 @@
 //! fills the Rust gap).
 //!
 //! Wire shapes follow AgentMail's OpenAPI spec (`docs.agentmail.to/openapi.json`,
-//! API v0). Coverage focuses on the transactional core: inboxes, messages
-//! (send/list/get), and webhooks. Everything deserializes permissively -
-//! unknown fields are ignored, optional fields default, so spec additions
-//! don't break callers.
+//! API v0), with full coverage of the surface the official SDKs expose:
+//! inboxes, threads, messages, drafts, attachments, webhooks, domains, pods,
+//! allow/block lists, metrics, API keys, and agent onboarding. Everything
+//! deserializes permissively - unknown fields are ignored, optional fields
+//! default, so spec additions don't break callers.
 //!
 //! ```no_run
 //! # async fn demo() -> Result<(), agentmail::Error> {

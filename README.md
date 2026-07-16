@@ -12,20 +12,37 @@
 > change; pin a version and read the changelog.
 
 A typed, `async` client for [AgentMail](https://agentmail.to), the email API
-for agents. Coverage is the transactional core:
+for agents, with **full coverage of the AgentMail API v0** at its canonical
+scopes:
 
-- **Inboxes**: create / list / get / delete (free plan: 3 inboxes,
-  3k emails/month, `@agentmail.to` addresses)
-- **Messages**: send / list / get
-- **Webhooks**: create / list / delete (e.g. `message.received`)
-- **Pagination** on every list call (`Page { limit, page_token }`)
+- **Inboxes**: create / list / get / update / delete
+- **Threads**: list / filter / search / get / update / delete
+- **Messages**: send / list / filter / search / get / update / delete, reply,
+  reply-all, forward, raw source, batch get / update
+- **Drafts**: create / list / get / update / delete / send
+- **Attachments**: fetch metadata and download bytes (presigned)
+- **Webhooks**: create / list / get / update / delete, plus optional Svix
+  signature verification
+- **Domains**: create / list / get / update / delete, verify, zone file
+- **Pods**, **allow/block lists**, **metrics** (events + usage), **inbox
+  events**, **API keys**, **organization**, and **agent** sign-up / verify
+- **Pagination** on every list call (`Page { limit, page_token }`) and
+  **automatic retries** with exponential backoff
 
-Deliberately small: `reqwest` + `serde` + `thiserror`, with permissive
-deserialization (unknown fields are ignored) so API additions don't break you.
-Requests carry a 30-second default timeout. TLS is **rustls with the ring
-provider** (no OpenSSL, no aws-lc-rs, no C toolchain). The client installs ring
-as the process default at construction; if your application already installs a
-crypto provider, that choice is respected.
+Deliberately small: `reqwest` + `serde` + `thiserror` (plus `tokio` for retry
+backoff), with permissive deserialization (unknown fields are ignored) so API
+additions don't break you. Requests carry a 30-second default timeout. TLS is
+**rustls with the ring provider** (no OpenSSL, no aws-lc-rs, no C toolchain).
+The client installs ring as the process default at construction; if your
+application already installs a crypto provider, that choice is respected.
+
+### Features
+
+- `retries` (default): automatic retries with backoff. Turn it off with
+  `default-features = false` to drop the direct `tokio` dependency and make
+  every request a single attempt; tune it with `Client::with_retry_policy`.
+- `webhook-verify` (off by default): `verify_webhook_signature` for Svix-signed
+  webhook deliveries. Adds `ring` (already the rustls provider) and `base64`.
 
 ## Install
 
@@ -77,27 +94,19 @@ test that creates, exercises, and lists real inboxes against the API:
 AGENTMAIL_API_KEY=... cargo run --example smoke
 ```
 
-## Parity roadmap
+## Parity
 
-Where this crate stands against the official Python/TypeScript SDKs
-(API v0). Covered now:
+This crate covers the full AgentMail API v0 surface that the official
+Python/TypeScript SDKs expose, at the **canonical scope** for each resource
+(inbox-scoped mail resources, top-level org resources). The scope-mirrored
+variants the SDKs generate (`/pods/{id}/...` and `/inboxes/{id}/...` copies of
+org-level resources) are not separately bound, since they return the same
+shapes; open an issue if you need one.
 
-- [x] Inboxes: create / list / get / delete
-- [x] Messages: send / list / get
-- [x] Webhooks: create / list / delete
-- [x] Pagination (`limit` / `page_token` cursors)
-
-Not covered yet, roughly in the order we'd like to add them (PRs welcome):
-
-- [ ] Threads (list / get)
-- [ ] Attachments (send and fetch)
-- [ ] Message updates (labels, read state) and reply-to threading
-- [ ] Drafts (create / send)
-- [ ] Message list filters (labels, before/after, from/to/subject)
-- [ ] Webhook update / get; signature verification helper (Svix)
-- [ ] Domains and pods
-- [ ] WebSocket / real-time events
-- [ ] Automatic retries with backoff
+Two things the official SDKs also lack and this crate treats as extras: there
+is **no WebSocket / realtime** API to bind (AgentMail exposes none), and the
+Svix **webhook signature verification** helper here goes slightly beyond the
+SDKs (behind the `webhook-verify` feature).
 
 Changes land in the [changelog](CHANGELOG.md).
 

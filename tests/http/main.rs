@@ -1,3 +1,4 @@
+mod attachments;
 mod common;
 mod core;
 mod drafts;

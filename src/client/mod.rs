@@ -8,6 +8,7 @@ use reqwest::{Method, StatusCode};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
+mod attachments;
 mod drafts;
 mod inboxes;
 mod messages;

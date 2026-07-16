@@ -1,6 +1,8 @@
 use crate::util::QueryBuilder;
 use serde::{Deserialize, Serialize};
 
+use super::Attachment;
+
 /// Request body for [`Client::send_message`]. At least one recipient in `to`
 /// and one of `text`/`html` are required by the API.
 #[derive(Clone, Debug, Default, Serialize)]
@@ -112,6 +114,9 @@ pub struct Message {
     /// RFC 3339 send/receive timestamp.
     #[serde(default)]
     pub timestamp: Option<String>,
+    /// Attachments on the message (present in get-message responses).
+    #[serde(default)]
+    pub attachments: Vec<Attachment>,
 }
 /// One page of messages from [`Client::list_messages_page`].
 #[derive(Clone, Debug, Deserialize)]

@@ -10,5 +10,7 @@ mod messages;
 mod messages_parity;
 mod metrics;
 mod pods;
+#[cfg(feature = "retries")]
+mod retry;
 mod threads;
 mod webhooks;

@@ -20,6 +20,11 @@ categories = ["api-bindings", "email", "web-programming"]
 name = "agentmail"
 
 [features]
+default = ["retries"]
+# Automatic retries with exponential backoff (RetryPolicy). On by default to
+# match the official SDKs; gates the direct tokio dependency, so
+# `default-features = false` drops it and every request makes a single attempt.
+retries = ["dep:tokio"]
 # Svix webhook-signature verification (verify_webhook_signature). Off by
 # default so the base client needs no crypto beyond rustls's ring provider;
 # enabling it adds a direct ring + base64 dependency.
@@ -37,6 +42,9 @@ rustls = { version = "0.23", default-features = false, features = ["ring", "std"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
+# Async sleep for retry backoff (retries feature). reqwest already pulls tokio
+# with its time feature enabled, so this adds no new crates to the tree.
+tokio = { version = "1", default-features = false, features = ["time"], optional = true }
 # webhook-verify only. ring is already compiled in as rustls's crypto provider,
 # so this adds no new C toolchain; base64 has no transitive deps.
 ring = { version = "0.17", optional = true }

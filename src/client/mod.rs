@@ -72,9 +72,32 @@ impl Client {
         Ok(text)
     }
 
+    /// Build an authenticated request. Shared by every attempt of `execute`.
+    fn build_request<B>(
+        &self,
+        method: Method,
+        url: &str,
+        query: &[(&str, String)],
+        body: Option<&B>,
+    ) -> reqwest::RequestBuilder
+    where
+        B: Serialize + ?Sized,
+    {
+        let mut req = self.http.request(method, url).bearer_auth(&self.api_key);
+        if !query.is_empty() {
+            req = req.query(query);
+        }
+        if let Some(body) = body {
+            req = req.json(body);
+        }
+        req
+    }
+
     /// Send an authenticated request and return the raw (status, body) without
-    /// decoding. All the shared request-building lives here so retries (added
-    /// later) wrap exactly one place.
+    /// decoding. With the `retries` feature, transient failures (timeout, 429,
+    /// 5xx) are retried with backoff here, the single chokepoint every endpoint
+    /// method funnels through.
+    #[cfg(feature = "retries")]
     async fn execute<B>(
         &self,
         method: Method,
@@ -85,19 +108,101 @@ impl Client {
     where
         B: Serialize + ?Sized,
     {
-        let mut req = self
-            .http
-            .request(method, format!("{}{path}", self.base_url))
-            .bearer_auth(&self.api_key);
-        if !query.is_empty() {
-            req = req.query(query);
+        let url = format!("{}{path}", self.base_url);
+        let policy = &self.retry_policy;
+        let mut attempt: u32 = 0;
+        loop {
+            // Bodies are always in-memory, so a retry can re-serialize freely.
+            match self
+                .build_request(method.clone(), &url, query, body)
+                .send()
+                .await
+            {
+                Ok(resp) => {
+                    let status = resp.status();
+                    let retry_after = parse_retry_after(resp.headers());
+                    let text = resp.text().await.unwrap_or_default();
+                    if is_retryable_status(status) && attempt < policy.max_retries {
+                        let delay = retry_after.unwrap_or_else(|| policy.backoff(attempt));
+                        tokio::time::sleep(delay).await;
+                        attempt += 1;
+                        continue;
+                    }
+                    return Ok((status, text));
+                }
+                Err(e) => {
+                    if is_retryable_error(&e) && attempt < policy.max_retries {
+                        tokio::time::sleep(policy.backoff(attempt)).await;
+                        attempt += 1;
+                        continue;
+                    }
+                    return Err(Error::Transport(e));
+                }
+            }
         }
-        if let Some(body) = body {
-            req = req.json(body);
-        }
-        let resp = req.send().await?;
+    }
+
+    /// Single-attempt `execute`, used when the `retries` feature is off.
+    #[cfg(not(feature = "retries"))]
+    async fn execute<B>(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(&str, String)],
+        body: Option<&B>,
+    ) -> Result<(StatusCode, String), Error>
+    where
+        B: Serialize + ?Sized,
+    {
+        let url = format!("{}{path}", self.base_url);
+        let resp = self.build_request(method, &url, query, body).send().await?;
         let status = resp.status();
         let text = resp.text().await.unwrap_or_default();
         Ok((status, text))
     }
+}
+
+#[cfg(feature = "retries")]
+impl crate::RetryPolicy {
+    /// Exponential backoff for `attempt` (0-based), capped at `max_delay`, with
+    /// up to 25% added jitter derived from the wall clock (no `rand` dependency).
+    fn backoff(&self, attempt: u32) -> std::time::Duration {
+        let base = self.base_delay.as_millis() as u64;
+        let cap = self.max_delay.as_millis() as u64;
+        let grown = base.saturating_mul(1u64 << attempt.min(20)).min(cap).max(1);
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.subsec_nanos() as u64)
+            .unwrap_or(0);
+        let jitter = nanos % (grown / 4 + 1);
+        std::time::Duration::from_millis(grown + jitter)
+    }
+}
+
+/// Retry on request timeout, 429, and any 5xx.
+#[cfg(feature = "retries")]
+fn is_retryable_status(status: StatusCode) -> bool {
+    status == StatusCode::REQUEST_TIMEOUT
+        || status == StatusCode::TOO_MANY_REQUESTS
+        || status.is_server_error()
+}
+
+/// Retry transport errors that are transient (connect / timeout).
+#[cfg(feature = "retries")]
+fn is_retryable_error(e: &reqwest::Error) -> bool {
+    e.is_timeout() || e.is_connect()
+}
+
+/// Parse an integer-seconds `Retry-After` header, capped at 30s. The HTTP-date
+/// form is ignored (falls back to backoff).
+#[cfg(feature = "retries")]
+fn parse_retry_after(headers: &reqwest::header::HeaderMap) -> Option<std::time::Duration> {
+    let secs: u64 = headers
+        .get(reqwest::header::RETRY_AFTER)?
+        .to_str()
+        .ok()?
+        .trim()
+        .parse()
+        .ok()?;
+    Some(std::time::Duration::from_secs(secs.min(30)))
 }

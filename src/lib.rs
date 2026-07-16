@@ -86,12 +86,40 @@ pub enum Error {
     NoDownloadUrl,
 }
 
+/// How the client retries transient failures. Applied to every request at the
+/// one HTTP chokepoint. `Default` retries twice with exponential backoff.
+///
+/// Requires the `retries` feature (on by default).
+#[cfg(feature = "retries")]
+#[derive(Clone, Debug)]
+pub struct RetryPolicy {
+    /// Extra attempts after the first. `0` disables retries.
+    pub max_retries: u32,
+    /// Base backoff delay; doubles each attempt.
+    pub base_delay: std::time::Duration,
+    /// Upper bound on a single backoff delay (before jitter).
+    pub max_delay: std::time::Duration,
+}
+
+#[cfg(feature = "retries")]
+impl Default for RetryPolicy {
+    fn default() -> Self {
+        RetryPolicy {
+            max_retries: 2,
+            base_delay: std::time::Duration::from_millis(500),
+            max_delay: std::time::Duration::from_secs(8),
+        }
+    }
+}
+
 /// An authenticated handle on the AgentMail API. Cheap to clone-ish (it owns
 /// a pooled `reqwest::Client`); construct once and share by reference.
 pub struct Client {
     http: reqwest::Client,
     base_url: String,
     api_key: String,
+    #[cfg(feature = "retries")]
+    retry_policy: RetryPolicy,
 }
 
 // Manual impl so an accidental `{:?}` never prints the API key.
@@ -122,6 +150,8 @@ impl Client {
                 .expect("reqwest client"),
             base_url: base_url.into().trim_end_matches('/').to_string(),
             api_key: api_key.into(),
+            #[cfg(feature = "retries")]
+            retry_policy: RetryPolicy::default(),
         }
     }
 
@@ -131,5 +161,14 @@ impl Client {
         let base =
             std::env::var("AGENTMAIL_BASE_URL").unwrap_or_else(|_| DEFAULT_BASE_URL.to_string());
         Ok(Self::new(key, base))
+    }
+
+    /// Replace the [`RetryPolicy`]. Set `max_retries` to `0` to disable retries.
+    ///
+    /// Requires the `retries` feature (on by default).
+    #[cfg(feature = "retries")]
+    pub fn with_retry_policy(mut self, policy: RetryPolicy) -> Self {
+        self.retry_policy = policy;
+        self
     }
 }

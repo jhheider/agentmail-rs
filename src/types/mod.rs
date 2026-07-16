@@ -11,6 +11,7 @@ mod domains;
 mod drafts;
 mod inboxes;
 mod messages;
+mod pods;
 mod threads;
 mod webhooks;
 
@@ -20,6 +21,7 @@ pub use domains::*;
 pub use drafts::*;
 pub use inboxes::*;
 pub use messages::*;
+pub use pods::*;
 pub use threads::*;
 pub use webhooks::*;
 

@@ -14,6 +14,7 @@ mod domains;
 mod drafts;
 mod inboxes;
 mod messages;
+mod pods;
 mod threads;
 mod webhooks;
 

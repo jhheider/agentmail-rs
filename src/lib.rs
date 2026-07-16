@@ -74,6 +74,11 @@ pub enum Error {
         /// The response body, verbatim.
         body: String,
     },
+    /// [`Client::download_attachment`] was handed an attachment with no
+    /// `download_url`. Only the attachment-download endpoints populate that
+    /// field; fetch the attachment via `get_*_attachment` first.
+    #[error("attachment has no download_url")]
+    NoDownloadUrl,
 }
 
 /// An authenticated handle on the AgentMail API. Cheap to clone-ish (it owns

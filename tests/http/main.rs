@@ -7,6 +7,7 @@ mod drafts;
 mod lists;
 mod messages;
 mod messages_parity;
+mod metrics;
 mod pods;
 mod threads;
 mod webhooks;

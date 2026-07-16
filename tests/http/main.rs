@@ -5,6 +5,7 @@ mod core;
 mod domains;
 mod drafts;
 mod messages;
+mod messages_parity;
 mod pods;
 mod threads;
 mod webhooks;

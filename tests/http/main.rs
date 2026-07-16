@@ -2,6 +2,7 @@ mod attachments;
 mod auth;
 mod common;
 mod core;
+mod domains;
 mod drafts;
 mod messages;
 mod threads;

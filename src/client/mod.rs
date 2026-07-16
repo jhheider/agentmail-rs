@@ -10,6 +10,7 @@ use serde::de::DeserializeOwned;
 
 mod attachments;
 mod auth;
+mod domains;
 mod drafts;
 mod inboxes;
 mod messages;
@@ -52,6 +53,16 @@ impl Client {
             reason: e.to_string(),
             body: text.to_string(),
         })
+    }
+
+    /// Send an authenticated bodiless request and return the raw response body
+    /// as text, for the non-JSON endpoints (e.g. a domain zone file).
+    pub(crate) async fn request_text(&self, method: Method, path: &str) -> Result<String, Error> {
+        let (status, text) = self.execute(method, path, &[], None::<&NoBody>).await?;
+        if !status.is_success() {
+            return Err(Error::Api { status, body: text });
+        }
+        Ok(text)
     }
 
     /// Send an authenticated request and return the raw (status, body) without

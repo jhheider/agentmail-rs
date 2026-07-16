@@ -1,4 +1,4 @@
-use crate::{types::*, util::urlish, Error, Page};
+use crate::{Error, Page, types::*, util::urlish};
 
 impl super::Client {
     /// POST /v0/inboxes, a new agent-owned email address. Free plans get

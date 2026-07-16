@@ -20,6 +20,18 @@ pub struct CreateInbox {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<serde_json::Value>,
 }
+
+/// Request body for [`Client::update_inbox`]. Fields left `None` are omitted
+/// and stay unchanged; set `metadata` to `Some(Value::Null)` to clear it.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct UpdateInbox {
+    /// Replace the human-readable sender name.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_name: Option<String>,
+    /// Replace the stored metadata.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<serde_json::Value>,
+}
 /// An agent-owned inbox, as the API returns it.
 #[derive(Clone, Debug, Deserialize)]
 pub struct Inbox {

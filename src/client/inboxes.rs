@@ -37,6 +37,17 @@ impl Client {
         .await
     }
 
+    /// PATCH /v0/inboxes/{inbox_id}, update the display name and/or metadata.
+    pub async fn update_inbox(&self, inbox_id: &str, update: UpdateInbox) -> Result<Inbox, Error> {
+        self.request(
+            reqwest::Method::PATCH,
+            &format!("/v0/inboxes/{}", urlish(inbox_id)),
+            &[],
+            Some(&update),
+        )
+        .await
+    }
+
     /// DELETE /v0/inboxes/{inbox_id}
     pub async fn delete_inbox(&self, inbox_id: &str) -> Result<(), Error> {
         self.request(

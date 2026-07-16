@@ -6,6 +6,7 @@
 use crate::util::QueryBuilder;
 
 mod attachments;
+mod auth;
 mod drafts;
 mod inboxes;
 mod messages;
@@ -13,6 +14,7 @@ mod threads;
 mod webhooks;
 
 pub use attachments::*;
+pub use auth::*;
 pub use drafts::*;
 pub use inboxes::*;
 pub use messages::*;

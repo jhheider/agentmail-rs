@@ -9,6 +9,7 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 
 mod attachments;
+mod auth;
 mod drafts;
 mod inboxes;
 mod messages;

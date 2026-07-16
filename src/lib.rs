@@ -482,6 +482,50 @@ impl Client {
     }
 
     // ── Drafts ─────────────────────────────────────────────────────────────────────
+
+    /// GET /v0/inboxes/{inbox_id}/messages with filters and pagination.
+    /// Pass [`MessageListFilters`] with any filter fields set to narrow
+    /// results. Feed [`MessageList::next_page_token`] back in as
+    /// [`MessageListFilters::page_token`] until it comes back `None`.
+    pub async fn list_messages_filtered(
+        &self,
+        inbox_id: &str,
+        filters: MessageListFilters,
+    ) -> Result<MessageList, Error> {
+        self.request(
+            reqwest::Method::GET,
+            &format!("/v0/inboxes/{}/messages", urlish(inbox_id)),
+            &filters.query(),
+            None,
+        )
+        .await
+    }
+
+    /// GET /v0/inboxes/{inbox_id}/messages/search with filters. Feed
+    /// [`MessageList::next_page_token`] back in as
+    /// [`MessageListFilters::page_token`] until it comes back `None`.
+    pub async fn search_messages(&self, inbox_id: &str, query: &str) -> Result<MessageList, Error> {
+        self.search_messages_page(inbox_id, query, MessageListFilters::default())
+            .await
+    }
+
+    /// GET /v0/inboxes/{inbox_id}/messages/search with pagination.
+    pub async fn search_messages_page(
+        &self,
+        inbox_id: &str,
+        query: &str,
+        filters: MessageListFilters,
+    ) -> Result<MessageList, Error> {
+        let mut q = filters.query();
+        q.push(("q", query.to_string()));
+        self.request(
+            reqwest::Method::GET,
+            &format!("/v0/inboxes/{}/messages/search", urlish(inbox_id)),
+            &q,
+            None,
+        )
+        .await
+    }
 }
 
 /// Minimal percent-encoding for path segments (ids are URL-safe in practice;
@@ -513,14 +557,10 @@ pub struct Page {
 
 impl Page {
     fn query(&self) -> Vec<(&'static str, String)> {
-        let mut q = Vec::new();
-        if let Some(limit) = self.limit {
-            q.push(("limit", limit.to_string()));
-        }
-        if let Some(token) = &self.page_token {
-            q.push(("page_token", token.clone()));
-        }
-        q
+        QueryBuilder::new()
+            .opt("limit", self.limit.as_ref())
+            .opt("page_token", self.page_token.as_ref())
+            .build()
     }
 }
 
@@ -932,6 +972,95 @@ pub struct Attachment {
     /// When `download_url` expires (RFC 3339).
     #[serde(default)]
     pub expires_at: Option<String>,
+}
+
+/// Filters for [`Client::list_messages_filtered`] and
+/// [`Client::search_messages_page`]. Pagination fields (`limit`,
+/// `page_token`) live here because they share the same query-parameter
+/// namespace as the filter fields.
+#[derive(Clone, Debug, Default)]
+pub struct MessageListFilters {
+    /// Maximum items per page.
+    pub limit: Option<u32>,
+    /// Cursor from a previous response's `next_page_token`.
+    pub page_token: Option<String>,
+    /// Filter by labels.
+    pub labels: Vec<String>,
+    /// Only messages before this timestamp (RFC 3339).
+    pub before: Option<String>,
+    /// Only messages after this timestamp (RFC 3339).
+    pub after: Option<String>,
+    /// Return oldest first instead of newest first.
+    pub ascending: Option<bool>,
+    /// Include spam messages.
+    pub include_spam: Option<bool>,
+    /// Include blocked messages.
+    pub include_blocked: Option<bool>,
+    /// Include unauthenticated messages.
+    pub include_unauthenticated: Option<bool>,
+    /// Include trashed messages.
+    pub include_trash: Option<bool>,
+    /// Filter by sender substring (repeatable).
+    pub from: Vec<String>,
+    /// Filter by recipient substring -- matches to, cc, or bcc (repeatable).
+    pub to: Vec<String>,
+    /// Filter by subject substring (repeatable).
+    pub subject: Vec<String>,
+}
+
+impl MessageListFilters {
+    fn query(&self) -> Vec<(&'static str, String)> {
+        QueryBuilder::new()
+            .opt("limit", self.limit.as_ref())
+            .opt("page_token", self.page_token.as_ref())
+            .many("labels", &self.labels)
+            .opt("before", self.before.as_ref())
+            .opt("after", self.after.as_ref())
+            .opt("ascending", self.ascending.as_ref())
+            .opt("include_spam", self.include_spam.as_ref())
+            .opt("include_blocked", self.include_blocked.as_ref())
+            .opt(
+                "include_unauthenticated",
+                self.include_unauthenticated.as_ref(),
+            )
+            .opt("include_trash", self.include_trash.as_ref())
+            .many("from", &self.from)
+            .many("to", &self.to)
+            .many("subject", &self.subject)
+            .build()
+    }
+}
+
+/// Accumulates query-string parameters, skipping absent ones. Shared by
+/// [`Page`] and the per-resource filter builders so the list endpoints all
+/// serialize their parameters the same way.
+pub(crate) struct QueryBuilder(Vec<(&'static str, String)>);
+
+impl QueryBuilder {
+    pub(crate) fn new() -> Self {
+        Self(Vec::new())
+    }
+
+    /// Push `key=value` when `value` is `Some`; skip it otherwise.
+    pub(crate) fn opt(mut self, key: &'static str, value: Option<&impl ToString>) -> Self {
+        if let Some(value) = value {
+            self.0.push((key, value.to_string()));
+        }
+        self
+    }
+
+    /// Push one `key=value` pair per element (repeated-key array parameters).
+    pub(crate) fn many(mut self, key: &'static str, values: &[String]) -> Self {
+        for value in values {
+            self.0.push((key, value.clone()));
+        }
+        self
+    }
+
+    /// Finish and return the accumulated parameters.
+    pub(crate) fn build(self) -> Vec<(&'static str, String)> {
+        self.0
+    }
 }
 
 #[cfg(test)]

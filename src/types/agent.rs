@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-/// Request body for [`Client::agent_sign_up`]: start onboarding a new agent,
+/// Request body for [`Client::agent_sign_up`](crate::Client::agent_sign_up): start onboarding a new agent,
 /// which emails a one-time code to `human_email`.
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct AgentSignup {
@@ -16,7 +16,7 @@ pub struct AgentSignup {
     pub referrer: Option<String>,
 }
 
-/// The response to [`Client::agent_sign_up`]: the new organization, inbox, and
+/// The response to [`Client::agent_sign_up`](crate::Client::agent_sign_up): the new organization, inbox, and
 /// its API key.
 #[derive(Clone, Debug, Deserialize)]
 pub struct AgentSignupResult {
@@ -28,7 +28,7 @@ pub struct AgentSignupResult {
     pub api_key: String,
 }
 
-/// The result of [`Client::agent_verify`].
+/// The result of [`Client::agent_verify`](crate::Client::agent_verify).
 #[derive(Clone, Debug, Deserialize)]
 pub struct AgentVerifyResult {
     /// Whether the one-time code was accepted.

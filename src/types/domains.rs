@@ -52,7 +52,7 @@ pub struct VerificationRecord {
     pub priority: Option<i64>,
 }
 
-/// Request body for [`Client::create_domain`].
+/// Request body for [`Client::create_domain`](crate::Client::create_domain).
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct CreateDomain {
     /// The domain name to add.
@@ -65,7 +65,7 @@ pub struct CreateDomain {
     pub subdomains_enabled: Option<bool>,
 }
 
-/// Request body for [`Client::update_domain`]. Fields left `None` stay unchanged.
+/// Request body for [`Client::update_domain`](crate::Client::update_domain). Fields left `None` stay unchanged.
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct UpdateDomain {
     /// Enable or disable bounce/complaint feedback.
@@ -76,7 +76,7 @@ pub struct UpdateDomain {
     pub subdomains_enabled: Option<bool>,
 }
 
-/// One page of domains from [`Client::list_domains_page`].
+/// One page of domains from [`Client::list_domains_page`](crate::Client::list_domains_page).
 #[derive(Clone, Debug, Deserialize)]
 pub struct DomainList {
     /// Total domains in the account (not just this page).

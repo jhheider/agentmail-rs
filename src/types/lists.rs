@@ -90,7 +90,7 @@ fn unknown_entry_type() -> EntryType {
     EntryType::Unknown
 }
 
-/// Request body for [`Client::create_list_entry`].
+/// Request body for [`Client::create_list_entry`](crate::Client::create_list_entry).
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct CreateListEntry {
     /// The address or domain to add.
@@ -100,7 +100,7 @@ pub struct CreateListEntry {
     pub reason: Option<String>,
 }
 
-/// One page of list entries from [`Client::list_list_entries_page`].
+/// One page of list entries from [`Client::list_list_entries_page`](crate::Client::list_list_entries_page).
 #[derive(Clone, Debug, Deserialize)]
 pub struct ListEntries {
     /// Total entries in the list (not just this page).

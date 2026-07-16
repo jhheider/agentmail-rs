@@ -27,6 +27,33 @@ impl Client {
         .await
     }
 
+    /// GET /v0/webhooks/{webhook_id}
+    pub async fn get_webhook(&self, webhook_id: &str) -> Result<Webhook, Error> {
+        self.request(
+            reqwest::Method::GET,
+            &format!("/v0/webhooks/{}", urlish(webhook_id)),
+            &[],
+            None::<&NoBody>,
+        )
+        .await
+    }
+
+    /// PATCH /v0/webhooks/{webhook_id}, edit event types and inbox/pod
+    /// targeting. Inbox and pod sets change by delta (see [`UpdateWebhook`]).
+    pub async fn update_webhook(
+        &self,
+        webhook_id: &str,
+        update: UpdateWebhook,
+    ) -> Result<Webhook, Error> {
+        self.request(
+            reqwest::Method::PATCH,
+            &format!("/v0/webhooks/{}", urlish(webhook_id)),
+            &[],
+            Some(&update),
+        )
+        .await
+    }
+
     /// DELETE /v0/webhooks/{webhook_id}
     pub async fn delete_webhook(&self, webhook_id: &str) -> Result<(), Error> {
         self.request(

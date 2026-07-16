@@ -38,7 +38,12 @@ mod client;
 mod types;
 mod util;
 
+#[cfg(feature = "webhook-verify")]
+mod verify;
+
 pub use types::*;
+#[cfg(feature = "webhook-verify")]
+pub use verify::*;
 
 /// The production API host. Override with `Client::new(key, base_url)` for
 /// the EU region (`https://api.agentmail.eu`) or a mock server.

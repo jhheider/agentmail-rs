@@ -11,6 +11,7 @@ use serde::de::DeserializeOwned;
 mod drafts;
 mod inboxes;
 mod messages;
+mod threads;
 mod webhooks;
 
 /// A body type for the bodiless request calls (`GET`/`DELETE`). Turbofish this

@@ -9,12 +9,14 @@ mod attachments;
 mod drafts;
 mod inboxes;
 mod messages;
+mod threads;
 mod webhooks;
 
 pub use attachments::*;
 pub use drafts::*;
 pub use inboxes::*;
 pub use messages::*;
+pub use threads::*;
 pub use webhooks::*;
 
 /// Pagination controls for the `list_*_page` calls. `Default` is the API's

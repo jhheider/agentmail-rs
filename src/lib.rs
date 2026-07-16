@@ -3,7 +3,7 @@
 //! fills the Rust gap).
 //!
 //! Wire shapes follow AgentMail's OpenAPI spec (`docs.agentmail.to/openapi.json`,
-//! API v0). Everything deserializes permissively — unknown fields are ignored,
+//! API v0). Everything deserializes permissively -- unknown fields are ignored,
 //! optional fields default, so spec additions don't break callers.
 //!
 //! ```no_run
@@ -36,6 +36,9 @@ mod client;
 mod types;
 mod util;
 
+// Keep the old single-file client.rs out of the build.
+// It's replaced by src/client/{mod,inboxes,messages,webhooks}.rs
+
 pub use types::*;
 
 /// The production API host. Override with `Client::new(key, base_url)` for
@@ -63,7 +66,7 @@ pub enum Error {
         /// The response body, verbatim (AgentMail sends JSON error details).
         body: String,
     },
-    /// A 2xx answer whose body didn't decode into the expected type — either
+    /// A 2xx answer whose body didn't decode into the expected type -- either
     /// a bug in this crate's wire shapes or a breaking change in the API.
     #[error("undecodable AgentMail response ({reason}): {body}")]
     Decode {

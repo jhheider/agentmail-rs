@@ -16,7 +16,8 @@ async fn send_text_posts_minimal_body() {
         .await;
 
     let sent = client
-        .send_text("ib_1", "a@b.c", "Hi", "Body")
+        .inbox("ib_1")
+        .send_text("a@b.c", "Hi", "Body")
         .await
         .unwrap();
     assert_eq!(sent.message_id, "m1");
@@ -38,15 +39,13 @@ async fn send_message_posts_json_body() {
         .await;
 
     let sent = client
-        .send_message(
-            "ib_1",
-            agentmail::SendMessage {
-                to: vec!["a@b.c".into()],
-                subject: Some("s".into()),
-                text: Some("t".into()),
-                ..Default::default()
-            },
-        )
+        .inbox("ib_1")
+        .send_message(agentmail::SendMessage {
+            to: vec!["a@b.c".into()],
+            subject: Some("s".into()),
+            text: Some("t".into()),
+            ..Default::default()
+        })
         .await
         .unwrap();
     assert_eq!(sent.message_id, "m1");
@@ -58,9 +57,7 @@ async fn reply_to_message_posts_json_body() {
     let (server, client) = client().await;
     Mock::given(method("POST"))
         .and(path("/v0/inboxes/ib_1/messages/m1/reply"))
-        .and(body_json(serde_json::json!({
-            "text": "reply text",
-        })))
+        .and(body_json(serde_json::json!({ "text": "reply text" })))
         .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
             "message_id": "m2", "thread_id": "t1",
         })))
@@ -69,8 +66,8 @@ async fn reply_to_message_posts_json_body() {
         .await;
 
     let sent = client
+        .inbox("ib_1")
         .reply_to_message(
-            "ib_1",
             "m1",
             agentmail::ReplyToMessage {
                 text: Some("reply text".into()),
@@ -95,8 +92,8 @@ async fn reply_all_to_message_hits_correct_path() {
         .await;
 
     let sent = client
+        .inbox("ib_1")
         .reply_all_to_message(
-            "ib_1",
             "m1",
             agentmail::ReplyToMessage {
                 text: Some("reply all".into()),
@@ -126,8 +123,8 @@ async fn update_message_sends_patch_with_labels() {
         .await;
 
     let msg = client
+        .inbox("ib_1")
         .update_message(
-            "ib_1",
             "m1",
             agentmail::UpdateMessage {
                 add_labels: vec!["read".into()],
@@ -148,7 +145,7 @@ async fn delete_message_returns_ok() {
         .mount(&server)
         .await;
 
-    client.delete_message("ib_1", "m1").await.unwrap();
+    client.inbox("ib_1").delete_message("m1").await.unwrap();
 }
 
 #[tokio::test]
@@ -174,10 +171,7 @@ async fn message_list_filters_sends_query_params() {
         after: Some("2026-07-14T00:00:00Z".into()),
         ..Default::default()
     };
-    let list = client
-        .list_messages_filtered("ib_1", filters)
-        .await
-        .unwrap();
+    let list = client.inbox("ib_1").list_messages(filters).await.unwrap();
     assert_eq!(list.count, 0);
 }
 
@@ -203,10 +197,7 @@ async fn message_list_filters_sends_from_to_subject() {
         subject: vec!["invoice".into()],
         ..Default::default()
     };
-    let list = client
-        .list_messages_filtered("ib_1", filters)
-        .await
-        .unwrap();
+    let list = client.inbox("ib_1").list_messages(filters).await.unwrap();
     assert_eq!(list.messages[0].message_id, "m1");
 }
 
@@ -224,7 +215,11 @@ async fn search_messages_includes_query_param() {
         .mount(&server)
         .await;
 
-    let list = client.search_messages("ib_1", "urgent").await.unwrap();
+    let list = client
+        .inbox("ib_1")
+        .search_messages("urgent", Default::default())
+        .await
+        .unwrap();
     assert_eq!(list.count, 1);
 }
 
@@ -249,27 +244,41 @@ async fn search_messages_with_filters_and_pagination() {
         ..Default::default()
     };
     let list = client
-        .search_messages_page("ib_1", "hello", filters)
+        .inbox("ib_1")
+        .search_messages("hello", filters)
         .await
         .unwrap();
     assert_eq!(list.count, 0);
 }
 
 #[tokio::test]
-async fn message_list_filters_default_is_empty_query() {
+async fn list_all_messages_drains_pages() {
     let (server, client) = client().await;
+    // First page carries a token; second page ends it.
+    Mock::given(method("GET"))
+        .and(path("/v0/inboxes/ib_1/messages"))
+        .and(query_param("page_token", "p2"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "count": 2, "messages": [{"message_id": "m2"}]
+        })))
+        .with_priority(1)
+        .mount(&server)
+        .await;
     Mock::given(method("GET"))
         .and(path("/v0/inboxes/ib_1/messages"))
         .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
-            "count": 0, "messages": [],
+            "count": 2, "messages": [{"message_id": "m1"}], "next_page_token": "p2"
         })))
-        .expect(1)
+        .with_priority(2)
         .mount(&server)
         .await;
 
-    let list = client
-        .list_messages_filtered("ib_1", agentmail::MessageListFilters::default())
+    let all = client
+        .inbox("ib_1")
+        .list_all_messages(Default::default())
         .await
         .unwrap();
-    assert_eq!(list.count, 0);
+    assert_eq!(all.len(), 2);
+    assert_eq!(all[0].message_id, "m1");
+    assert_eq!(all[1].message_id, "m2");
 }

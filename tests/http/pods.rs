@@ -54,7 +54,7 @@ async fn list_and_delete_pod() {
         .await;
 
     let list = client
-        .list_pods_page(agentmail::Page {
+        .list_pods(agentmail::Page {
             limit: Some(2),
             ..Default::default()
         })

@@ -20,15 +20,13 @@ async fn create_draft_posts_json_body() {
         .await;
 
     let draft = client
-        .create_draft(
-            "ib_1",
-            agentmail::CreateDraft {
-                to: vec!["a@b.c".into()],
-                subject: Some("Draft".into()),
-                text: Some("body".into()),
-                ..Default::default()
-            },
-        )
+        .inbox("ib_1")
+        .create_draft(agentmail::CreateDraft {
+            to: vec!["a@b.c".into()],
+            subject: Some("Draft".into()),
+            text: Some("body".into()),
+            ..Default::default()
+        })
         .await
         .unwrap();
     assert_eq!(draft.draft_id, "d1");
@@ -46,7 +44,11 @@ async fn list_drafts_decodes_first_page() {
         .mount(&server)
         .await;
 
-    let list = client.list_drafts("ib_1").await.unwrap();
+    let list = client
+        .inbox("ib_1")
+        .list_drafts(Default::default())
+        .await
+        .unwrap();
     assert_eq!(list.count, 1);
     assert_eq!(list.drafts[0].draft_id, "d1");
 }
@@ -65,7 +67,7 @@ async fn get_draft_returns_full_draft() {
         .mount(&server)
         .await;
 
-    let draft = client.get_draft("ib_1", "d1").await.unwrap();
+    let draft = client.inbox("ib_1").get_draft("d1").await.unwrap();
     assert_eq!(draft.draft_id, "d1");
 }
 
@@ -86,8 +88,8 @@ async fn update_draft_sends_patch() {
         .await;
 
     let draft = client
+        .inbox("ib_1")
         .update_draft(
-            "ib_1",
             "d1",
             agentmail::UpdateDraft {
                 subject: Some("Updated".into()),
@@ -108,7 +110,7 @@ async fn delete_draft_returns_ok() {
         .mount(&server)
         .await;
 
-    client.delete_draft("ib_1", "d1").await.unwrap();
+    client.inbox("ib_1").delete_draft("d1").await.unwrap();
 }
 
 #[tokio::test]
@@ -123,7 +125,7 @@ async fn send_draft_posts_and_returns_sent_message() {
         .mount(&server)
         .await;
 
-    let sent = client.send_draft("ib_1", "d1").await.unwrap();
+    let sent = client.inbox("ib_1").send_draft("d1").await.unwrap();
     assert_eq!(sent.message_id, "m1");
 }
 

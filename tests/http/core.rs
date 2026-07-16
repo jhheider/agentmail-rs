@@ -14,7 +14,7 @@ async fn sends_bearer_auth_and_decodes_success() {
         .mount(&server)
         .await;
 
-    let list = client.list_inboxes().await.unwrap();
+    let list = client.org().list_inboxes(Default::default()).await.unwrap();
     assert_eq!(list.count, 1);
     assert_eq!(list.inboxes[0].email, "x@agentmail.to");
 }
@@ -28,7 +28,7 @@ async fn non_2xx_maps_to_api_error() {
         .mount(&server)
         .await;
 
-    match client.get_inbox("ib_missing").await {
+    match client.org().get_inbox("ib_missing").await {
         Err(agentmail::Error::Api { status, body }) => {
             assert_eq!(status.as_u16(), 404);
             assert!(body.contains("not found"));
@@ -46,7 +46,7 @@ async fn empty_delete_body_is_ok() {
         .mount(&server)
         .await;
 
-    client.delete_inbox("ib_1").await.unwrap();
+    client.org().delete_inbox("ib_1").await.unwrap();
 }
 
 #[tokio::test]
@@ -58,7 +58,7 @@ async fn undecodable_2xx_body_is_decode_error() {
         .mount(&server)
         .await;
 
-    match client.list_inboxes().await {
+    match client.org().list_inboxes(Default::default()).await {
         Err(agentmail::Error::Decode { body, .. }) => assert!(body.contains("not json")),
         other => panic!("expected Error::Decode, got {other:?}"),
     }
@@ -77,7 +77,7 @@ async fn path_segments_are_percent_encoded_on_the_wire() {
         .await;
 
     // A slash or space in an id must not change the route shape.
-    client.get_inbox("a/b c").await.unwrap();
+    client.org().get_inbox("a/b c").await.unwrap();
 }
 
 #[tokio::test]
@@ -94,10 +94,43 @@ async fn pagination_params_reach_the_query_string() {
         .mount(&server)
         .await;
 
-    let page = agentmail::Page {
+    let filters = agentmail::MessageListFilters {
         limit: Some(5),
         page_token: Some("tok_2".into()),
+        ..Default::default()
     };
-    let list = client.list_messages_page("ib_1", page).await.unwrap();
+    let list = client.inbox("ib_1").list_messages(filters).await.unwrap();
     assert!(list.next_page_token.is_none());
+}
+
+#[tokio::test]
+async fn scope_prefixes_org_inbox_pod() {
+    let (server, client) = client().await;
+    // The same resource (threads) at all three scopes, proving base()/the
+    // generic Scoped impl route to the right prefix.
+    for p in [
+        "/v0/threads",
+        "/v0/inboxes/ib_1/threads",
+        "/v0/pods/pod_1/threads",
+    ] {
+        Mock::given(method("GET"))
+            .and(path(p))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "count": 0, "threads": []
+            })))
+            .expect(1)
+            .mount(&server)
+            .await;
+    }
+    client.org().list_threads(Default::default()).await.unwrap();
+    client
+        .inbox("ib_1")
+        .list_threads(Default::default())
+        .await
+        .unwrap();
+    client
+        .pod("pod_1")
+        .list_threads(Default::default())
+        .await
+        .unwrap();
 }

@@ -9,26 +9,27 @@
 //! deserializes permissively - unknown fields are ignored, optional fields
 //! default, so spec additions don't break callers.
 //!
+//! Resources that exist at more than one scope (threads, webhooks, lists,
+//! domains, ...) are reached through a scope handle - [`Client::org`],
+//! [`Client::inbox`], or [`Client::pod`] - so the compiler rejects an
+//! operation the scope doesn't support. Inbox-only resources (messages, drafts)
+//! live on [`Client::inbox`].
+//!
 //! ```no_run
 //! # async fn demo() -> Result<(), agentmail::Error> {
 //! let client = agentmail::Client::from_env()?; // AGENTMAIL_API_KEY
 //! let inbox = client
+//!     .org()
 //!     .create_inbox(agentmail::CreateInbox {
 //!         username: Some("my-agent".into()),
 //!         display_name: Some("My Agent".into()),
 //!         ..Default::default()
 //!     })
-//!     .await?;
+//!     .await?; // my-agent@agentmail.to
+//!
 //! client
-//!     .send_message(
-//!         &inbox.inbox_id,
-//!         agentmail::SendMessage {
-//!             to: vec!["someone@example.com".into()],
-//!             subject: Some("Hello".into()),
-//!             text: Some("From an agent's own inbox.".into()),
-//!             ..Default::default()
-//!         },
-//!     )
+//!     .inbox(&inbox.inbox_id)
+//!     .send_text("someone@example.com", "Hello", "From an agent's own inbox.")
 //!     .await?;
 //! # Ok(()) }
 //! ```
@@ -63,6 +64,11 @@ pub use types::*;
 #[cfg(feature = "webhook-verify")]
 #[cfg_attr(docsrs, doc(cfg(feature = "webhook-verify")))]
 pub use verify::*;
+
+pub use client::scope::{
+    ApiKeys, Domains, Drafts, InboxScope, Inboxes, Lists, Metrics, OrgScope, PodScope, Scope,
+    Scoped, Threads, Webhooks,
+};
 
 /// The production API host. Override with `Client::new(key, base_url)` for
 /// the EU region (`https://api.agentmail.eu`) or a mock server.

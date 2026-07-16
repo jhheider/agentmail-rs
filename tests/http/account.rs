@@ -27,6 +27,7 @@ async fn create_list_delete_api_key() {
         .await;
 
     let created = client
+        .org()
         .create_api_key(agentmail::CreateApiKey {
             name: Some("ci".into()),
             ..Default::default()
@@ -34,8 +35,16 @@ async fn create_list_delete_api_key() {
         .await
         .unwrap();
     assert_eq!(created.api_key, "am_secret_xyz");
-    assert_eq!(client.list_api_keys().await.unwrap().count, 1);
-    client.delete_api_key("key_1").await.unwrap();
+    assert_eq!(
+        client
+            .org()
+            .list_api_keys(Default::default())
+            .await
+            .unwrap()
+            .count,
+        1
+    );
+    client.org().delete_api_key("key_1").await.unwrap();
 }
 
 #[tokio::test]

@@ -5,6 +5,44 @@ All notable changes to this crate are documented here. The format follows
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 API v0 upstream is pre-1.0; expect breaking releases while it settles.
 
+## [0.3.0] - 2026-07-16
+
+Full three-scope coverage of the AgentMail API v0 (organization, inbox, pod),
+reached through typed scope handles. **Breaking**: most methods moved from
+`Client` onto a scope handle.
+
+### Added
+
+- Typed scope handles: `Client::org()`, `Client::inbox(id)`, `Client::pod(id)`
+  return a `Scoped<S>` whose available methods are determined at compile time by
+  the scope's capabilities (e.g. `client.inbox(id).list_domains(..)` does not
+  compile: inboxes have no domains). Every previously inbox-only resource, plus
+  the org- and pod-scoped variants of threads, webhooks, lists, domains,
+  metrics, API keys, drafts, and inboxes, is now reachable. This completes 1:1
+  surface parity with the official SDKs across all scopes.
+- `list_all_*` drain helpers on every list endpoint (e.g.
+  `inbox.list_all_messages`, `org.list_all_domains`) that fetch all pages into a
+  `Vec`, with no new dependencies.
+
+### Changed (breaking)
+
+- Resource methods moved from `Client` onto scope handles:
+  - Inbox-only (`client.inbox(id).*`): messages (send/reply/forward/raw/batch/
+    ...), draft writes (create/update/delete/send), `list_events`.
+  - Multi-scope (`client.org()/inbox(id)/pod(id).*`): threads, readable drafts,
+    webhooks, allow/block lists, metrics, API keys; domains and inbox
+    management on `org()`/`pod()`.
+  - Account-global stays on `Client`: `list_pods`/`create_pod`/`get_pod`/
+    `delete_pod`, `get_organization`, `auth_me`, `agent_sign_up`/`agent_verify`,
+    `download_attachment`/`download_raw`.
+- List calls take their filter/`Page` argument directly (no separate `_page` and
+  `_filtered` variants): `list_messages(filters)`, `list_threads(filters)`,
+  `list_domains(page)`, etc. `search_*` takes `(query, filters)`.
+- `list_list_entries` is renamed `list_entries` (on the scope handle).
+- `ListDirection` and `ListKind` are input-only path enums now (no `Deserialize`,
+  no `Unknown` variant), so a call can't target a bogus list path.
+- Renamed `list_inbox_events` to `inbox(id).list_events`.
+
 ## [0.2.1] - 2026-07-16
 
 Polish release: no breaking changes.

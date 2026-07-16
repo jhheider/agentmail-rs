@@ -31,7 +31,7 @@ pub struct InboxEvent {
     pub created_at: Option<String>,
 }
 
-/// One page of inbox events from [`Client::list_inbox_events_page`](crate::Client::list_inbox_events_page).
+/// One page of inbox events from `list_inbox_events_page`.
 #[derive(Clone, Debug, Deserialize)]
 pub struct InboxEventList {
     /// Total events for the inbox (not just this page).

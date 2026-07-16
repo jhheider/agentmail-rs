@@ -21,7 +21,7 @@ async fn get_webhook_decodes_full_shape() {
         .mount(&server)
         .await;
 
-    let wh = client.get_webhook("wh_1").await.unwrap();
+    let wh = client.org().get_webhook("wh_1").await.unwrap();
     assert_eq!(wh.webhook_id, "wh_1");
     assert!(wh.enabled);
     assert_eq!(wh.client_id.as_deref(), Some("ref-1"));
@@ -49,6 +49,7 @@ async fn update_webhook_sends_delta_body() {
         .await;
 
     let wh = client
+        .org()
         .update_webhook(
             "wh_1",
             agentmail::UpdateWebhook {

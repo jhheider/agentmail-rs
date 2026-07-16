@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-/// Request body for [`Client::create_webhook`](crate::Client::create_webhook).
+/// Request body for `create_webhook`.
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct CreateWebhook {
     /// HTTPS endpoint to deliver events to.
@@ -18,7 +18,7 @@ pub struct CreateWebhook {
     pub client_id: Option<String>,
 }
 
-/// Request body for [`Client::update_webhook`](crate::Client::update_webhook). Every field is optional; leave
+/// Request body for `update_webhook`. Every field is optional; leave
 /// a field empty to keep it unchanged. Inbox and pod targeting is edited by
 /// delta (add/remove lists) rather than by replacing the whole set.
 #[derive(Clone, Debug, Default, Serialize)]
@@ -70,7 +70,7 @@ pub struct Webhook {
     #[serde(default)]
     pub created_at: Option<String>,
 }
-/// One page of webhooks from [`Client::list_webhooks_page`](crate::Client::list_webhooks_page).
+/// One page of webhooks from `list_webhooks_page`.
 #[derive(Clone, Debug, Deserialize)]
 pub struct WebhookList {
     /// Total webhooks in the account (not just this page).

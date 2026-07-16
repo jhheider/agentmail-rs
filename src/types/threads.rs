@@ -76,7 +76,7 @@ pub struct ThreadList {
     pub next_page_token: Option<String>,
 }
 
-/// Request body for [`Client::update_thread`](crate::Client::update_thread): labels to add and/or remove.
+/// Request body for `update_thread`: labels to add and/or remove.
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct UpdateThread {
     /// Labels to add.
@@ -87,7 +87,7 @@ pub struct UpdateThread {
     pub remove_labels: Vec<String>,
 }
 
-/// The API's response to [`Client::update_thread`](crate::Client::update_thread): the thread id and its
+/// The API's response to `update_thread`: the thread id and its
 /// labels after the update.
 #[derive(Clone, Debug, Deserialize)]
 pub struct UpdatedThread {
@@ -98,8 +98,8 @@ pub struct UpdatedThread {
     pub labels: Vec<String>,
 }
 
-/// Filters for [`Client::list_threads_filtered`](crate::Client::list_threads_filtered) and
-/// [`Client::search_threads_page`](crate::Client::search_threads_page). Pagination fields (`limit`, `page_token`)
+/// Filters for `list_threads_filtered` and
+/// `search_threads_page`. Pagination fields (`limit`, `page_token`)
 /// share the same query-parameter namespace as the filters.
 #[derive(Clone, Debug, Default)]
 pub struct ThreadListFilters {

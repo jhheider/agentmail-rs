@@ -8,14 +8,8 @@ impl Client {
             .await
     }
 
-    /// GET /v0/pods (first page; see [`Client::list_pods_page`]).
-    pub async fn list_pods(&self) -> Result<PodList, Error> {
-        self.list_pods_page(Page::default()).await
-    }
-
-    /// GET /v0/pods with pagination. Feed [`PodList::next_page_token`] back in
-    /// as [`Page::page_token`] until it comes back `None`.
-    pub async fn list_pods_page(&self, page: Page) -> Result<PodList, Error> {
+    /// GET /v0/pods, one page.
+    pub async fn list_pods(&self, page: Page) -> Result<PodList, Error> {
         self.request(
             reqwest::Method::GET,
             "/v0/pods",
@@ -23,6 +17,26 @@ impl Client {
             None::<&NoBody>,
         )
         .await
+    }
+
+    /// Every pod, draining pagination.
+    pub async fn list_all_pods(&self) -> Result<Vec<Pod>, Error> {
+        let mut out = Vec::new();
+        let mut token = None;
+        loop {
+            let resp = self
+                .list_pods(Page {
+                    limit: None,
+                    page_token: token,
+                })
+                .await?;
+            let next = resp.next_page_token;
+            out.extend(resp.pods);
+            match next {
+                Some(t) => token = Some(t),
+                None => return Ok(out),
+            }
+        }
     }
 
     /// GET /v0/pods/{pod_id}

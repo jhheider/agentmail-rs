@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{Attachment, SendAttachment};
 
-/// Request body for [`Client::send_message`](crate::Client::send_message). At least one recipient in `to`
+/// Request body for `send_message`. At least one recipient in `to`
 /// and one of `text`/`html` are required by the API.
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct SendMessage {
@@ -46,8 +46,8 @@ pub struct SentMessage {
     /// Thread the message was filed under.
     pub thread_id: String,
 }
-/// Request body for [`Client::reply_to_message`](crate::Client::reply_to_message) and
-/// [`Client::reply_all_to_message`](crate::Client::reply_all_to_message). The `to` field is derived from the
+/// Request body for `reply_to_message` and
+/// `reply_all_to_message`. The `to` field is derived from the
 /// parent message; at least one of `text`/`html` is required by the API.
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct ReplyToMessage {
@@ -75,7 +75,7 @@ pub struct ReplyToMessage {
 }
 
 /// The presigned download for a message's raw RFC 822 source, from
-/// [`Client::get_raw_message`](crate::Client::get_raw_message). Fetch the bytes with [`Client::download_raw`](crate::Client::download_raw).
+/// `get_raw_message`. Fetch the bytes with `download_raw`.
 #[derive(Clone, Debug, Deserialize)]
 pub struct RawMessage {
     /// The message id.
@@ -90,14 +90,14 @@ pub struct RawMessage {
     pub expires_at: Option<String>,
 }
 
-/// Request body for [`Client::batch_get_messages`](crate::Client::batch_get_messages).
+/// Request body for `batch_get_messages`.
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct BatchGetMessages {
     /// The message ids to fetch.
     pub message_ids: Vec<String>,
 }
 
-/// Response to [`Client::batch_get_messages`](crate::Client::batch_get_messages).
+/// Response to `batch_get_messages`.
 #[derive(Clone, Debug, Deserialize)]
 pub struct BatchGetMessagesResponse {
     /// The number of messages returned.
@@ -107,7 +107,7 @@ pub struct BatchGetMessagesResponse {
     pub messages: Vec<Message>,
 }
 
-/// Request body for [`Client::batch_update_messages`](crate::Client::batch_update_messages): apply the same label
+/// Request body for `batch_update_messages`: apply the same label
 /// changes to many messages at once.
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct BatchUpdateMessages {
@@ -121,7 +121,7 @@ pub struct BatchUpdateMessages {
     pub remove_labels: Vec<String>,
 }
 
-/// Response to [`Client::batch_update_messages`](crate::Client::batch_update_messages).
+/// Response to `batch_update_messages`.
 #[derive(Clone, Debug, Deserialize)]
 pub struct BatchUpdateMessagesResponse {
     /// The number of messages updated.
@@ -130,7 +130,7 @@ pub struct BatchUpdateMessagesResponse {
     #[serde(default)]
     pub updates: Vec<UpdatedMessage>,
 }
-/// Request body for [`Client::update_message`](crate::Client::update_message).
+/// Request body for `update_message`.
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct UpdateMessage {
     /// Labels to add.
@@ -140,7 +140,7 @@ pub struct UpdateMessage {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub remove_labels: Vec<String>,
 }
-/// The API's response to [`Client::update_message`](crate::Client::update_message): the message id and its
+/// The API's response to `update_message`: the message id and its
 /// labels after the update.
 #[derive(Clone, Debug, Deserialize)]
 pub struct UpdatedMessage {
@@ -190,7 +190,7 @@ pub struct Message {
     #[serde(default)]
     pub attachments: Vec<Attachment>,
 }
-/// One page of messages from [`Client::list_messages_page`](crate::Client::list_messages_page).
+/// One page of messages from `list_messages_page`.
 #[derive(Clone, Debug, Deserialize)]
 pub struct MessageList {
     /// Total messages in the inbox (not just this page).
@@ -202,8 +202,8 @@ pub struct MessageList {
     #[serde(default)]
     pub next_page_token: Option<String>,
 }
-/// Filters for [`Client::list_messages_filtered`](crate::Client::list_messages_filtered) and
-/// [`Client::search_messages_page`](crate::Client::search_messages_page). Pagination fields (`limit`,
+/// Filters for `list_messages_filtered` and
+/// `search_messages_page`. Pagination fields (`limit`,
 /// `page_token`) live here because they share the same query-parameter
 /// namespace as the filter fields.
 #[derive(Clone, Debug, Default)]

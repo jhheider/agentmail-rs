@@ -30,7 +30,7 @@ async fn retries_429_then_succeeds() {
         .await;
 
     let client = fast_client(&server, 2);
-    let inbox = client.get_inbox("ib_1").await.unwrap();
+    let inbox = client.org().get_inbox("ib_1").await.unwrap();
     assert_eq!(inbox.inbox_id, "ib_1");
 }
 
@@ -54,7 +54,10 @@ async fn honors_retry_after_zero() {
         .await;
 
     let client = fast_client(&server, 2);
-    assert_eq!(client.get_inbox("ib_1").await.unwrap().inbox_id, "ib_1");
+    assert_eq!(
+        client.org().get_inbox("ib_1").await.unwrap().inbox_id,
+        "ib_1"
+    );
 }
 
 #[tokio::test]
@@ -68,7 +71,7 @@ async fn does_not_retry_4xx_client_error() {
         .await;
 
     let client = fast_client(&server, 3);
-    match client.get_inbox("ib_1").await {
+    match client.org().get_inbox("ib_1").await {
         Err(agentmail::Error::Api { status, .. }) => assert_eq!(status.as_u16(), 400),
         other => panic!("expected Api 400, got {other:?}"),
     }
@@ -86,7 +89,7 @@ async fn max_retries_zero_disables() {
 
     let client = fast_client(&server, 0);
     assert!(matches!(
-        client.get_inbox("ib_1").await,
+        client.org().get_inbox("ib_1").await,
         Err(agentmail::Error::Api { .. })
     ));
 }
@@ -102,7 +105,7 @@ async fn exhaustion_returns_last_error() {
         .await;
 
     let client = fast_client(&server, 2);
-    match client.get_inbox("ib_1").await {
+    match client.org().get_inbox("ib_1").await {
         Err(agentmail::Error::Api { status, .. }) => assert_eq!(status.as_u16(), 500),
         other => panic!("expected Api 500, got {other:?}"),
     }

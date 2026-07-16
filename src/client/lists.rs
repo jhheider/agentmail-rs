@@ -1,91 +1,123 @@
 use crate::client::NoBody;
-use crate::{Client, Error, Page, types::*, util::urlish};
+use crate::client::scope::{Lists, Scoped};
+use crate::{Error, Page, types::*, util::urlish};
 
-impl Client {
-    /// GET /v0/lists/{direction}/{kind} (first page; see
-    /// [`Client::list_list_entries_page`]).
-    pub async fn list_list_entries(
-        &self,
-        direction: ListDirection,
-        kind: ListKind,
-    ) -> Result<ListEntries, Error> {
-        self.list_list_entries_page(direction, kind, Page::default())
-            .await
-    }
-
-    /// GET /v0/lists/{direction}/{kind} with pagination. Feed
-    /// [`ListEntries::next_page_token`] back in as [`Page::page_token`] until it
-    /// comes back `None`.
-    pub async fn list_list_entries_page(
+impl<S: Lists> Scoped<'_, S> {
+    /// GET `{scope}/lists/{direction}/{kind}`, one page of entries.
+    pub async fn list_entries(
         &self,
         direction: ListDirection,
         kind: ListKind,
         page: Page,
     ) -> Result<ListEntries, Error> {
-        self.request(
-            reqwest::Method::GET,
-            &format!("/v0/lists/{}/{}", direction.as_path(), kind.as_path()),
-            &page.query(),
-            None::<&NoBody>,
-        )
-        .await
+        self.client
+            .request(
+                reqwest::Method::GET,
+                &format!(
+                    "{}/lists/{}/{}",
+                    self.base(),
+                    direction.as_path(),
+                    kind.as_path()
+                ),
+                &page.query(),
+                None::<&NoBody>,
+            )
+            .await
     }
 
-    /// POST /v0/lists/{direction}/{kind}, add an address or domain to the list.
+    /// Every entry in the list, draining pagination.
+    pub async fn list_all_entries(
+        &self,
+        direction: ListDirection,
+        kind: ListKind,
+    ) -> Result<Vec<ListEntry>, Error> {
+        let mut out = Vec::new();
+        let mut token = None;
+        loop {
+            let resp = self
+                .list_entries(
+                    direction,
+                    kind,
+                    Page {
+                        limit: None,
+                        page_token: token,
+                    },
+                )
+                .await?;
+            let next = resp.next_page_token;
+            out.extend(resp.entries);
+            match next {
+                Some(t) => token = Some(t),
+                None => return Ok(out),
+            }
+        }
+    }
+
+    /// POST `{scope}/lists/{direction}/{kind}`, add an address or domain.
     pub async fn create_list_entry(
         &self,
         direction: ListDirection,
         kind: ListKind,
         entry: CreateListEntry,
     ) -> Result<ListEntry, Error> {
-        self.request(
-            reqwest::Method::POST,
-            &format!("/v0/lists/{}/{}", direction.as_path(), kind.as_path()),
-            &[],
-            Some(&entry),
-        )
-        .await
+        self.client
+            .request(
+                reqwest::Method::POST,
+                &format!(
+                    "{}/lists/{}/{}",
+                    self.base(),
+                    direction.as_path(),
+                    kind.as_path()
+                ),
+                &[],
+                Some(&entry),
+            )
+            .await
     }
 
-    /// GET /v0/lists/{direction}/{kind}/{entry}
+    /// GET `{scope}/lists/{direction}/{kind}/{entry}`.
     pub async fn get_list_entry(
         &self,
         direction: ListDirection,
         kind: ListKind,
         entry: &str,
     ) -> Result<ListEntry, Error> {
-        self.request(
-            reqwest::Method::GET,
-            &format!(
-                "/v0/lists/{}/{}/{}",
-                direction.as_path(),
-                kind.as_path(),
-                urlish(entry),
-            ),
-            &[],
-            None::<&NoBody>,
-        )
-        .await
+        self.client
+            .request(
+                reqwest::Method::GET,
+                &format!(
+                    "{}/lists/{}/{}/{}",
+                    self.base(),
+                    direction.as_path(),
+                    kind.as_path(),
+                    urlish(entry),
+                ),
+                &[],
+                None::<&NoBody>,
+            )
+            .await
     }
 
-    /// DELETE /v0/lists/{direction}/{kind}/{entry}
+    /// DELETE `{scope}/lists/{direction}/{kind}/{entry}`.
     pub async fn delete_list_entry(
         &self,
         direction: ListDirection,
         kind: ListKind,
         entry: &str,
     ) -> Result<(), Error> {
-        self.request(
-            reqwest::Method::DELETE,
-            &format!(
-                "/v0/lists/{}/{}/{}",
-                direction.as_path(),
-                kind.as_path(),
-                urlish(entry),
-            ),
-            &[],
-            None::<&NoBody>,
-        )
-        .await
+        self.client
+            .request(
+                reqwest::Method::DELETE,
+                &format!(
+                    "{}/lists/{}/{}/{}",
+                    self.base(),
+                    direction.as_path(),
+                    kind.as_path(),
+                    urlish(entry),
+                ),
+                &[],
+                None::<&NoBody>,
+            )
+            .await
     }
 }

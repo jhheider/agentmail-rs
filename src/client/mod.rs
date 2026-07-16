@@ -21,6 +21,7 @@ mod messages;
 mod metrics;
 mod organizations;
 mod pods;
+pub(crate) mod scope;
 mod threads;
 mod webhooks;
 

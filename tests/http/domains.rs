@@ -24,6 +24,7 @@ async fn create_domain_returns_records() {
         .await;
 
     let domain = client
+        .org()
         .create_domain(agentmail::CreateDomain {
             domain: "mail.example.com".into(),
             ..Default::default()
@@ -67,12 +68,27 @@ async fn list_get_update_delete_domain() {
         .mount(&server)
         .await;
 
-    assert_eq!(client.list_domains().await.unwrap().count, 1);
     assert_eq!(
-        client.get_domain("dom_1").await.unwrap().status.as_deref(),
+        client
+            .org()
+            .list_domains(Default::default())
+            .await
+            .unwrap()
+            .count,
+        1
+    );
+    assert_eq!(
+        client
+            .org()
+            .get_domain("dom_1")
+            .await
+            .unwrap()
+            .status
+            .as_deref(),
         Some("verified")
     );
     client
+        .org()
         .update_domain(
             "dom_1",
             agentmail::UpdateDomain {
@@ -82,7 +98,7 @@ async fn list_get_update_delete_domain() {
         )
         .await
         .unwrap();
-    client.delete_domain("dom_1").await.unwrap();
+    client.org().delete_domain("dom_1").await.unwrap();
 }
 
 #[tokio::test]
@@ -101,7 +117,7 @@ async fn verify_domain_and_zone_file() {
         .mount(&server)
         .await;
 
-    client.verify_domain("dom_1").await.unwrap();
-    let zone = client.get_domain_zone_file("dom_1").await.unwrap();
+    client.org().verify_domain("dom_1").await.unwrap();
+    let zone = client.org().get_domain_zone_file("dom_1").await.unwrap();
     assert!(zone.contains("v=spf1"));
 }

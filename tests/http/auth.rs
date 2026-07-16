@@ -16,6 +16,7 @@ async fn update_inbox_sends_patch() {
         .await;
 
     let inbox = client
+        .org()
         .update_inbox(
             "ib_1",
             agentmail::UpdateInbox {

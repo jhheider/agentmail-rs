@@ -26,6 +26,7 @@ async fn create_and_list_block_entries() {
         .await;
 
     let created = client
+        .org()
         .create_list_entry(
             ListDirection::Receive,
             ListKind::Block,
@@ -39,7 +40,8 @@ async fn create_and_list_block_entries() {
     assert_eq!(created.entry_type, agentmail::EntryType::Domain);
 
     let page = client
-        .list_list_entries(ListDirection::Receive, ListKind::Block)
+        .org()
+        .list_entries(ListDirection::Receive, ListKind::Block, Default::default())
         .await
         .unwrap();
     assert_eq!(page.count, 1);
@@ -62,11 +64,13 @@ async fn get_and_delete_entry() {
         .await;
 
     let entry = client
+        .org()
         .get_list_entry(ListDirection::Send, ListKind::Allow, "a@b.c")
         .await
         .unwrap();
     assert_eq!(entry.entry, "a@b.c");
     client
+        .org()
         .delete_list_entry(ListDirection::Send, ListKind::Allow, "a@b.c")
         .await
         .unwrap();

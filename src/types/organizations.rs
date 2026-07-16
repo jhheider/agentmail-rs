@@ -1,7 +1,7 @@
 use serde::Deserialize;
 
 /// The organization the current API key belongs to, from
-/// [`Client::get_organization`](crate::Client::get_organization).
+/// `get_organization`.
 #[derive(Clone, Debug, Deserialize)]
 pub struct Organization {
     /// Unique organization id.

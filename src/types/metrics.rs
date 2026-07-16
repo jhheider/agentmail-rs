@@ -27,8 +27,8 @@ pub type MetricsEvents = BTreeMap<String, Vec<MetricBucket>>;
 /// Usage metrics keyed by usage type.
 pub type MetricsUsage = BTreeMap<String, Vec<UsagePoint>>;
 
-/// Query parameters for [`Client::get_metrics_events`](crate::Client::get_metrics_events) and
-/// [`Client::get_metrics_usage`](crate::Client::get_metrics_usage). `types` filters by event/usage type; leave it
+/// Query parameters for `get_metrics_events` and
+/// `get_metrics_usage`. `types` filters by event/usage type; leave it
 /// empty for all.
 #[derive(Clone, Debug, Default)]
 pub struct MetricsQuery {

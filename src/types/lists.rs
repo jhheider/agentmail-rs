@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-/// Which traffic direction a list governs.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "lowercase")]
+/// Which traffic direction a list governs. A path input only (there is no
+/// wire value to decode), so it has no unknown variant.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ListDirection {
     /// Applied to outbound (sent) mail.
     Send,
@@ -10,9 +10,6 @@ pub enum ListDirection {
     Receive,
     /// Applied to replies.
     Reply,
-    /// A direction this client version does not recognize.
-    #[serde(other)]
-    Unknown,
 }
 
 impl ListDirection {
@@ -22,22 +19,18 @@ impl ListDirection {
             ListDirection::Send => "send",
             ListDirection::Receive => "receive",
             ListDirection::Reply => "reply",
-            ListDirection::Unknown => "unknown",
         }
     }
 }
 
-/// Whether a list allows or blocks its entries.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "lowercase")]
+/// Whether a list allows or blocks its entries. A path input only, so it has
+/// no unknown variant.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ListKind {
     /// An allow list.
     Allow,
     /// A block list.
     Block,
-    /// A kind this client version does not recognize.
-    #[serde(other)]
-    Unknown,
 }
 
 impl ListKind {
@@ -46,7 +39,6 @@ impl ListKind {
         match self {
             ListKind::Allow => "allow",
             ListKind::Block => "block",
-            ListKind::Unknown => "unknown",
         }
     }
 }
@@ -90,7 +82,7 @@ fn unknown_entry_type() -> EntryType {
     EntryType::Unknown
 }
 
-/// Request body for [`Client::create_list_entry`](crate::Client::create_list_entry).
+/// Request body for `create_list_entry`.
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct CreateListEntry {
     /// The address or domain to add.
@@ -100,7 +92,7 @@ pub struct CreateListEntry {
     pub reason: Option<String>,
 }
 
-/// One page of list entries from [`Client::list_list_entries_page`](crate::Client::list_list_entries_page).
+/// One page of list entries from `list_list_entries_page`.
 #[derive(Clone, Debug, Deserialize)]
 pub struct ListEntries {
     /// Total entries in the list (not just this page).

@@ -10,7 +10,7 @@ async fn main() -> Result<(), agentmail::Error> {
     let client = agentmail::Client::from_env()?;
 
     // Find-or-create the two test inboxes.
-    let existing = client.list_inboxes().await?;
+    let existing = client.org().list_inboxes(Default::default()).await?;
     println!("existing inboxes: {}", existing.count);
     let find = |username: &str| {
         existing
@@ -31,6 +31,7 @@ async fn main() -> Result<(), agentmail::Error> {
             }
             None => {
                 let i = client
+                    .org()
                     .create_inbox(agentmail::CreateInbox {
                         username: Some(username.into()),
                         display_name: Some(display.into()),
@@ -47,14 +48,11 @@ async fn main() -> Result<(), agentmail::Error> {
     // The sender inbox writes to the recipient inbox; then read it back.
     let (sender, recipient) = (&ensure[0], &ensure[1]);
     let sent = client
-        .send_message(
-            &sender.inbox_id,
-            agentmail::SendMessage {
-                to: vec![recipient.email.clone()],
-                subject: Some("agentmail smoke test".into()),
-                text: Some("Sent from an agent's own inbox.".into()),
-                ..Default::default()
-            },
+        .inbox(&sender.inbox_id)
+        .send_text(
+            &recipient.email,
+            "agentmail smoke test",
+            "Sent from an agent's own inbox.",
         )
         .await?;
     println!(
@@ -63,32 +61,40 @@ async fn main() -> Result<(), agentmail::Error> {
     );
 
     // Threads: the send created one on the sender side.
-    let threads = client.list_threads(&sender.inbox_id).await?;
+    let threads = client
+        .inbox(&sender.inbox_id)
+        .list_threads(Default::default())
+        .await?;
     println!("sender threads: {}", threads.count);
 
     // Drafts: create, read back, and delete (round-trip without a second send).
     let draft = client
-        .create_draft(
-            &sender.inbox_id,
-            agentmail::CreateDraft {
-                to: vec![recipient.email.clone()],
-                subject: Some("agentmail smoke draft".into()),
-                text: Some("A draft, not sent.".into()),
-                ..Default::default()
-            },
-        )
+        .inbox(&sender.inbox_id)
+        .create_draft(agentmail::CreateDraft {
+            to: vec![recipient.email.clone()],
+            subject: Some("agentmail smoke draft".into()),
+            text: Some("A draft, not sent.".into()),
+            ..Default::default()
+        })
         .await?;
-    let fetched = client.get_draft(&sender.inbox_id, &draft.draft_id).await?;
+    let fetched = client
+        .inbox(&sender.inbox_id)
+        .get_draft(&draft.draft_id)
+        .await?;
     println!("draft {} created and fetched", fetched.draft_id);
     client
-        .delete_draft(&sender.inbox_id, &draft.draft_id)
+        .inbox(&sender.inbox_id)
+        .delete_draft(&draft.draft_id)
         .await?;
     println!("draft deleted");
 
     // Delivery between agentmail.to inboxes is quick but not instant.
     for attempt in 1..=10 {
         tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-        let msgs = client.list_messages(&recipient.inbox_id).await?;
+        let msgs = client
+            .inbox(&recipient.inbox_id)
+            .list_messages(Default::default())
+            .await?;
         if let Some(m) = msgs
             .messages
             .iter()

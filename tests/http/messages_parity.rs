@@ -14,8 +14,8 @@ async fn forward_message_posts_to_forward_path() {
         .await;
 
     let sent = client
+        .inbox("ib_1")
         .forward_message(
-            "ib_1",
             "m1",
             agentmail::SendMessage {
                 to: vec!["x@y.z".into()],
@@ -65,7 +65,7 @@ async fn get_raw_message_and_download() {
         .mount(&server)
         .await;
 
-    let raw = client.get_raw_message("ib_1", "m1").await.unwrap();
+    let raw = client.inbox("ib_1").get_raw_message("m1").await.unwrap();
     assert_eq!(raw.size, Some(42));
     let bytes = client.download_raw(&raw).await.unwrap();
     assert!(bytes.starts_with(b"From:"));
@@ -102,21 +102,20 @@ async fn batch_get_and_update() {
         .await;
 
     let got = client
-        .batch_get_messages("ib_1", vec!["m1".into(), "m2".into()])
+        .inbox("ib_1")
+        .batch_get_messages(vec!["m1".into(), "m2".into()])
         .await
         .unwrap();
     assert_eq!(got.count, 2);
     assert_eq!(got.messages.len(), 2);
 
     let updated = client
-        .batch_update_messages(
-            "ib_1",
-            agentmail::BatchUpdateMessages {
-                message_ids: vec!["m1".into(), "m2".into()],
-                add_labels: vec!["read".into()],
-                ..Default::default()
-            },
-        )
+        .inbox("ib_1")
+        .batch_update_messages(agentmail::BatchUpdateMessages {
+            message_ids: vec!["m1".into(), "m2".into()],
+            add_labels: vec!["read".into()],
+            ..Default::default()
+        })
         .await
         .unwrap();
     assert_eq!(updated.updates.len(), 2);

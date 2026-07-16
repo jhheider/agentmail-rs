@@ -12,8 +12,7 @@
 > change; pin a version and read the changelog.
 
 A typed, `async` client for [AgentMail](https://agentmail.to), the email API
-for agents, with **full coverage of the AgentMail API v0** at its canonical
-scopes:
+for agents, with **full coverage of the AgentMail API v0** at every scope:
 
 - **Inboxes**: create / list / get / update / delete
 - **Threads**: list / filter / search / get / update / delete
@@ -26,8 +25,29 @@ scopes:
 - **Domains**: create / list / get / update / delete, verify, zone file
 - **Pods**, **allow/block lists**, **metrics** (events + usage), **inbox
   events**, **API keys**, **organization**, and **agent** sign-up / verify
-- **Pagination** on every list call (`Page { limit, page_token }`) and
+- **Pagination** on every list call, `list_all_*` helpers that drain it, and
   **automatic retries** with exponential backoff
+
+### Scopes
+
+Resources that AgentMail exposes at more than one scope (threads, webhooks,
+lists, domains, metrics, API keys, drafts, inboxes) are reached through a
+**typed scope handle** so the compiler rejects an operation a scope doesn't
+support:
+
+```rust,no_run
+# async fn demo(client: agentmail::Client) -> Result<(), agentmail::Error> {
+client.org().list_threads(Default::default()).await?;          // all inboxes
+client.inbox("ib_1").list_threads(Default::default()).await?;  // one inbox
+client.pod("pod_1").list_threads(Default::default()).await?;   // one pod
+client.pod("pod_1").create_inbox(Default::default()).await?;   // inbox inside a pod
+// client.inbox("ib_1").list_domains(..)  // compile error: inboxes have no domains
+# Ok(()) }
+```
+
+Inbox-only resources (messages, drafts, inbox events) live on
+`client.inbox(id)`; account-global ones (pods, organization, auth, agent) are
+flat on `Client`.
 
 Deliberately small: `reqwest` + `serde` + `thiserror` (plus `tokio` for retry
 backoff), with permissive deserialization (unknown fields are ignored) so API
@@ -60,6 +80,7 @@ imports as `agentmail`. MSRV is **Rust 1.86**.
 let client = agentmail::Client::from_env()?; // AGENTMAIL_API_KEY
 
 let inbox = client
+    .org()
     .create_inbox(agentmail::CreateInbox {
         username: Some("my-agent".into()),
         ..Default::default()
@@ -68,17 +89,14 @@ let inbox = client
 
 // The common case, in one line:
 client
-    .send_text(
-        &inbox.inbox_id,
-        "someone@example.com",
-        "Hello",
-        "Sent from an agent's own inbox.",
-    )
+    .inbox(&inbox.inbox_id)
+    .send_text("someone@example.com", "Hello", "Sent from an agent's own inbox.")
     .await?;
 
 // Or build the full message for HTML, cc/bcc, attachments, labels:
 client
-    .send_message(&inbox.inbox_id, agentmail::SendMessage {
+    .inbox(&inbox.inbox_id)
+    .send_message(agentmail::SendMessage {
         to: vec!["someone@example.com".into()],
         subject: Some("Hello".into()),
         html: Some("<p>Rich body.</p>".into()),
@@ -86,7 +104,8 @@ client
     })
     .await?;
 
-for m in client.list_messages(&inbox.inbox_id).await?.messages {
+// Drain every page with a `list_all_*` helper:
+for m in client.inbox(&inbox.inbox_id).list_all_messages(Default::default()).await? {
     println!("{:?}: {:?}", m.from, m.subject);
 }
 # Ok(()) }
@@ -113,17 +132,15 @@ cargo run --example webhook --features webhook-verify
 
 ## Parity
 
-This crate covers the full AgentMail API v0 surface that the official
-Python/TypeScript SDKs expose, at the **canonical scope** for each resource
-(inbox-scoped mail resources, top-level org resources). The scope-mirrored
-variants the SDKs generate (`/pods/{id}/...` and `/inboxes/{id}/...` copies of
-org-level resources) are not separately bound, since they return the same
-shapes; open an issue if you need one.
+This crate binds the **entire AgentMail API v0 surface** the official
+Python/TypeScript SDKs expose, at **all three scopes** (organization, inbox,
+pod) via the typed scope handles above.
 
 Two things the official SDKs also lack and this crate treats as extras: there
 is **no WebSocket / realtime** API to bind (AgentMail exposes none), and the
 Svix **webhook signature verification** helper here goes slightly beyond the
-SDKs (behind the `webhook-verify` feature).
+SDKs (behind the `webhook-verify` feature). Beyond the SDKs, the `list_all_*`
+helpers drain pagination for you.
 
 Changes land in the [changelog](CHANGELOG.md).
 

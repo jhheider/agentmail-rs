@@ -19,7 +19,8 @@ async fn get_message_attachment_returns_download_url() {
         .await;
 
     let att = client
-        .get_message_attachment("ib_1", "m1", "at_1")
+        .inbox("ib_1")
+        .get_message_attachment("m1", "at_1")
         .await
         .unwrap();
     assert_eq!(att.attachment_id, "at_1");
@@ -44,11 +45,13 @@ async fn get_thread_and_draft_attachment_paths() {
             .await;
     }
     client
-        .get_thread_attachment("ib_1", "th_1", "at_1")
+        .inbox("ib_1")
+        .get_thread_attachment("th_1", "at_1")
         .await
         .unwrap();
     client
-        .get_draft_attachment("ib_1", "dr_1", "at_1")
+        .inbox("ib_1")
+        .get_draft_attachment("dr_1", "at_1")
         .await
         .unwrap();
 }

@@ -1,72 +1,6 @@
-use crate::client::NoBody;
-use crate::{Client, Error, types::*, util::urlish};
+use crate::{Client, Error, types::*};
 
 impl Client {
-    /// GET /v0/inboxes/{inbox_id}/messages/{message_id}/attachments/{attachment_id}.
-    /// The returned [`Attachment`] carries a short-lived `download_url`; pass it
-    /// to [`Client::download_attachment`] to fetch the bytes.
-    pub async fn get_message_attachment(
-        &self,
-        inbox_id: &str,
-        message_id: &str,
-        attachment_id: &str,
-    ) -> Result<Attachment, Error> {
-        self.request(
-            reqwest::Method::GET,
-            &format!(
-                "/v0/inboxes/{}/messages/{}/attachments/{}",
-                urlish(inbox_id),
-                urlish(message_id),
-                urlish(attachment_id),
-            ),
-            &[],
-            None::<&NoBody>,
-        )
-        .await
-    }
-
-    /// GET /v0/inboxes/{inbox_id}/threads/{thread_id}/attachments/{attachment_id}.
-    pub async fn get_thread_attachment(
-        &self,
-        inbox_id: &str,
-        thread_id: &str,
-        attachment_id: &str,
-    ) -> Result<Attachment, Error> {
-        self.request(
-            reqwest::Method::GET,
-            &format!(
-                "/v0/inboxes/{}/threads/{}/attachments/{}",
-                urlish(inbox_id),
-                urlish(thread_id),
-                urlish(attachment_id),
-            ),
-            &[],
-            None::<&NoBody>,
-        )
-        .await
-    }
-
-    /// GET /v0/inboxes/{inbox_id}/drafts/{draft_id}/attachments/{attachment_id}.
-    pub async fn get_draft_attachment(
-        &self,
-        inbox_id: &str,
-        draft_id: &str,
-        attachment_id: &str,
-    ) -> Result<Attachment, Error> {
-        self.request(
-            reqwest::Method::GET,
-            &format!(
-                "/v0/inboxes/{}/drafts/{}/attachments/{}",
-                urlish(inbox_id),
-                urlish(draft_id),
-                urlish(attachment_id),
-            ),
-            &[],
-            None::<&NoBody>,
-        )
-        .await
-    }
-
     /// Download an attachment's bytes from its presigned `download_url`. The URL
     /// is a short-lived S3 link fetched without the API bearer token, so obtain
     /// the [`Attachment`] from one of the `get_*_attachment` calls first (a
@@ -77,7 +11,17 @@ impl Client {
             .download_url
             .as_deref()
             .ok_or(Error::NoDownloadUrl)?;
-        // No bearer_auth: download_url is already an authenticated presigned URL.
+        self.download_url(url).await
+    }
+
+    /// Download the raw `.eml` bytes from a [`RawMessage`]'s presigned URL.
+    pub async fn download_raw(&self, raw: &RawMessage) -> Result<Vec<u8>, Error> {
+        self.download_url(&raw.download_url).await
+    }
+
+    /// GET a presigned URL without the API bearer token (it is already an
+    /// authenticated URL) and return the bytes.
+    async fn download_url(&self, url: &str) -> Result<Vec<u8>, Error> {
         let resp = self.http.get(url).send().await?;
         let status = resp.status();
         let bytes = resp.bytes().await?;

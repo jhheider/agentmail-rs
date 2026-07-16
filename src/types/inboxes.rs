@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-/// Request body for [`Client::create_inbox`](crate::Client::create_inbox). All fields optional; the API
+/// Request body for `create_inbox`. All fields optional; the API
 /// generates a username when none is given.
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct CreateInbox {
@@ -21,7 +21,7 @@ pub struct CreateInbox {
     pub metadata: Option<serde_json::Value>,
 }
 
-/// Request body for [`Client::update_inbox`](crate::Client::update_inbox). Fields left `None` are omitted
+/// Request body for `update_inbox`. Fields left `None` are omitted
 /// and stay unchanged; set `metadata` to `Some(Value::Null)` to clear it.
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct UpdateInbox {
@@ -52,7 +52,7 @@ pub struct Inbox {
     #[serde(default)]
     pub created_at: Option<String>,
 }
-/// One page of inboxes from [`Client::list_inboxes_page`](crate::Client::list_inboxes_page).
+/// One page of inboxes from `list_inboxes_page`.
 #[derive(Clone, Debug, Deserialize)]
 pub struct InboxList {
     /// Total inboxes in the account (not just this page).

@@ -19,7 +19,11 @@ async fn list_threads_decodes_first_page() {
         .mount(&server)
         .await;
 
-    let list = client.list_threads("ib_1").await.unwrap();
+    let list = client
+        .inbox("ib_1")
+        .list_threads(Default::default())
+        .await
+        .unwrap();
     assert_eq!(list.count, 1);
     assert_eq!(list.threads[0].thread_id, "th_1");
     assert_eq!(list.threads[0].message_count, Some(2));
@@ -49,7 +53,7 @@ async fn list_threads_filtered_sends_query_params() {
         include_spam: Some(true),
         ..Default::default()
     };
-    let list = client.list_threads_filtered("ib_1", filters).await.unwrap();
+    let list = client.inbox("ib_1").list_threads(filters).await.unwrap();
     assert_eq!(list.count, 0);
 }
 
@@ -71,7 +75,11 @@ async fn search_threads_includes_query_param() {
         .mount(&server)
         .await;
 
-    let list = client.search_threads("ib_1", "invoice").await.unwrap();
+    let list = client
+        .inbox("ib_1")
+        .search_threads("invoice", Default::default())
+        .await
+        .unwrap();
     assert_eq!(list.threads[0].thread_id, "th_2");
     assert!(list.threads[0].highlights.is_some());
 }
@@ -93,7 +101,7 @@ async fn get_thread_returns_messages() {
         .mount(&server)
         .await;
 
-    let thread = client.get_thread("ib_1", "th_1").await.unwrap();
+    let thread = client.inbox("ib_1").get_thread("th_1").await.unwrap();
     assert_eq!(thread.messages.len(), 1);
     assert_eq!(thread.messages[0].message_id, "m1");
 }
@@ -112,8 +120,8 @@ async fn update_thread_sends_patch_with_labels() {
         .await;
 
     let updated = client
+        .inbox("ib_1")
         .update_thread(
-            "ib_1",
             "th_1",
             agentmail::UpdateThread {
                 add_labels: vec!["archived".into()],
@@ -134,5 +142,5 @@ async fn delete_thread_returns_ok() {
         .mount(&server)
         .await;
 
-    client.delete_thread("ib_1", "th_1").await.unwrap();
+    client.inbox("ib_1").delete_thread("th_1").await.unwrap();
 }

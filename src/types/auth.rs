@@ -15,7 +15,7 @@ pub enum ScopeType {
     Unknown,
 }
 
-/// Who the current API key authenticates as, from [`Client::auth_me`](crate::Client::auth_me).
+/// Who the current API key authenticates as, from `auth_me`.
 #[derive(Clone, Debug, Deserialize)]
 pub struct Identity {
     /// Whether the key is scoped to the organization, a pod, or an inbox.

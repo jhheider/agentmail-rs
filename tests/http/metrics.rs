@@ -18,6 +18,7 @@ async fn get_metrics_events_keyed_by_type() {
         .await;
 
     let events = client
+        .org()
         .get_metrics_events(agentmail::MetricsQuery {
             types: vec!["message.received".into()],
             period: Some(3600),
@@ -43,6 +44,7 @@ async fn get_metrics_usage_keyed_by_type() {
         .await;
 
     let usage = client
+        .org()
         .get_metrics_usage(agentmail::MetricsQuery {
             types: vec!["storage".into()],
             ..Default::default()
@@ -68,7 +70,11 @@ async fn list_inbox_events_paginates() {
         .mount(&server)
         .await;
 
-    let events = client.list_inbox_events("ib_1").await.unwrap();
+    let events = client
+        .inbox("ib_1")
+        .list_events(Default::default())
+        .await
+        .unwrap();
     assert_eq!(events.count, 1);
     assert_eq!(events.events[0].event_id, "ev_1");
 }

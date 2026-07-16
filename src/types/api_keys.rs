@@ -28,7 +28,7 @@ pub struct ApiKey {
     pub created_at: Option<String>,
 }
 
-/// Request body for [`Client::create_api_key`](crate::Client::create_api_key).
+/// Request body for `create_api_key`.
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct CreateApiKey {
     /// Human-readable name for the key.
@@ -39,7 +39,7 @@ pub struct CreateApiKey {
     pub permissions: Option<serde_json::Value>,
 }
 
-/// The response to [`Client::create_api_key`](crate::Client::create_api_key). The full `api_key` secret is
+/// The response to `create_api_key`. The full `api_key` secret is
 /// returned exactly once, here; store it now, as it cannot be retrieved again.
 #[derive(Clone, Debug, Deserialize)]
 pub struct CreatedApiKey {
@@ -58,7 +58,7 @@ pub struct CreatedApiKey {
     pub created_at: Option<String>,
 }
 
-/// One page of API keys from [`Client::list_api_keys_page`](crate::Client::list_api_keys_page).
+/// One page of API keys from `list_api_keys_page`.
 #[derive(Clone, Debug, Deserialize)]
 pub struct ApiKeyList {
     /// Total keys in the account (not just this page).

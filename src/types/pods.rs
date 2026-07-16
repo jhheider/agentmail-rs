@@ -19,7 +19,7 @@ pub struct Pod {
     pub created_at: Option<String>,
 }
 
-/// Request body for [`Client::create_pod`](crate::Client::create_pod). All fields optional.
+/// Request body for `create_pod`. All fields optional.
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct CreatePod {
     /// Human-readable pod name.
@@ -30,7 +30,7 @@ pub struct CreatePod {
     pub client_id: Option<String>,
 }
 
-/// One page of pods from [`Client::list_pods_page`](crate::Client::list_pods_page).
+/// One page of pods from `list_pods_page`.
 #[derive(Clone, Debug, Deserialize)]
 pub struct PodList {
     /// Total pods in the account (not just this page).

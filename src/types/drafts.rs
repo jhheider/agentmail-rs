@@ -1,7 +1,7 @@
 use super::Attachment;
 use serde::{Deserialize, Serialize};
 
-/// Request body for [`Client::create_draft`](crate::Client::create_draft). At least one recipient or a
+/// Request body for `create_draft`. At least one recipient or a
 /// reply/forward-of reference and one of `text`/`html` are required by the
 /// API.
 #[derive(Clone, Debug, Default, Serialize)]
@@ -41,7 +41,7 @@ pub struct CreateDraft {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub send_at: Option<String>,
 }
-/// Request body for [`Client::update_draft`](crate::Client::update_draft). Every field is optional;
+/// Request body for `update_draft`. Every field is optional;
 /// omitted fields are left unchanged on the server. Pass `Some(vec![])`
 /// to clear a recipient field; pass `None` to leave it alone.
 #[derive(Clone, Debug, Default, Serialize)]
@@ -129,7 +129,7 @@ pub struct Draft {
     #[serde(default)]
     pub attachments: Vec<Attachment>,
 }
-/// One page of drafts from [`Client::list_drafts_page`](crate::Client::list_drafts_page).
+/// One page of drafts from `list_drafts_page`.
 #[derive(Clone, Debug, Deserialize)]
 pub struct DraftList {
     /// Total drafts in the inbox (not just this page).

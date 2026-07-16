@@ -142,3 +142,103 @@ async fn send_message_posts_json_body() {
     assert_eq!(sent.message_id, "m1");
     assert_eq!(sent.thread_id, "t1");
 }
+
+// ── Message Updates, Reply-to, etc. ───────────────────────────────────────────
+
+#[tokio::test]
+async fn reply_to_message_posts_json_body() {
+    let (server, client) = client().await;
+    Mock::given(method("POST"))
+        .and(path("/v0/inboxes/ib_1/messages/m1/reply"))
+        .and(wiremock::matchers::body_json(serde_json::json!({
+            "text": "reply text",
+        })))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "message_id": "m2", "thread_id": "t1",
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let sent = client
+        .reply_to_message(
+            "ib_1",
+            "m1",
+            agentmail::ReplyToMessage {
+                text: Some("reply text".into()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(sent.message_id, "m2");
+}
+
+#[tokio::test]
+async fn reply_all_to_message_hits_correct_path() {
+    let (server, client) = client().await;
+    Mock::given(method("POST"))
+        .and(path("/v0/inboxes/ib_1/messages/m1/reply-all"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "message_id": "m3", "thread_id": "t1",
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let sent = client
+        .reply_all_to_message(
+            "ib_1",
+            "m1",
+            agentmail::ReplyToMessage {
+                text: Some("reply all".into()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(sent.message_id, "m3");
+}
+
+#[tokio::test]
+async fn update_message_sends_patch_with_labels() {
+    let (server, client) = client().await;
+    Mock::given(method("PATCH"))
+        .and(path("/v0/inboxes/ib_1/messages/m1"))
+        .and(wiremock::matchers::body_json(serde_json::json!({
+            "add_labels": ["read"],
+            "remove_labels": ["unread"],
+        })))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "message_id": "m1",
+            "labels": ["read"],
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let msg = client
+        .update_message(
+            "ib_1",
+            "m1",
+            agentmail::UpdateMessage {
+                add_labels: vec!["read".into()],
+                remove_labels: vec!["unread".into()],
+            },
+        )
+        .await
+        .unwrap();
+    assert!(msg.labels.contains(&"read".to_string()));
+}
+
+#[tokio::test]
+async fn delete_message_returns_ok() {
+    let (server, client) = client().await;
+    Mock::given(method("DELETE"))
+        .and(path("/v0/inboxes/ib_1/messages/m1"))
+        .respond_with(ResponseTemplate::new(200))
+        .mount(&server)
+        .await;
+
+    client.delete_message("ib_1", "m1").await.unwrap();
+}

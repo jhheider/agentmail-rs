@@ -258,6 +258,88 @@ impl Client {
         .await
     }
 
+    /// POST /v0/inboxes/{inbox_id}/messages/{message_id}/reply -- reply to a
+    /// message. The `to` field is derived from the parent message; only
+    /// `text`/`html`/`cc`/`bcc` are caller-supplied.
+    pub async fn reply_to_message(
+        &self,
+        inbox_id: &str,
+        message_id: &str,
+        reply: ReplyToMessage,
+    ) -> Result<SentMessage, Error> {
+        self.request(
+            reqwest::Method::POST,
+            &format!(
+                "/v0/inboxes/{}/messages/{}/reply",
+                urlish(inbox_id),
+                urlish(message_id),
+            ),
+            &[],
+            Some(serde_json::to_value(reply).expect("serializable")),
+        )
+        .await
+    }
+
+    /// POST /v0/inboxes/{inbox_id}/messages/{message_id}/reply-all -- reply
+    /// to all recipients of a message.
+    pub async fn reply_all_to_message(
+        &self,
+        inbox_id: &str,
+        message_id: &str,
+        reply: ReplyToMessage,
+    ) -> Result<SentMessage, Error> {
+        self.request(
+            reqwest::Method::POST,
+            &format!(
+                "/v0/inboxes/{}/messages/{}/reply-all",
+                urlish(inbox_id),
+                urlish(message_id),
+            ),
+            &[],
+            Some(serde_json::to_value(reply).expect("serializable")),
+        )
+        .await
+    }
+
+    /// PATCH /v0/inboxes/{inbox_id}/messages/{message_id} -- update a
+    /// message's labels (read state is a label, e.g. add/remove `unread`).
+    /// Returns the message id and its labels after the change, not the full
+    /// message body.
+    pub async fn update_message(
+        &self,
+        inbox_id: &str,
+        message_id: &str,
+        update: UpdateMessage,
+    ) -> Result<UpdatedMessage, Error> {
+        self.request(
+            reqwest::Method::PATCH,
+            &format!(
+                "/v0/inboxes/{}/messages/{}",
+                urlish(inbox_id),
+                urlish(message_id),
+            ),
+            &[],
+            Some(serde_json::to_value(update).expect("serializable")),
+        )
+        .await
+    }
+
+    /// DELETE /v0/inboxes/{inbox_id}/messages/{message_id} -- permanently
+    /// deletes a message.
+    pub async fn delete_message(&self, inbox_id: &str, message_id: &str) -> Result<(), Error> {
+        self.request(
+            reqwest::Method::DELETE,
+            &format!(
+                "/v0/inboxes/{}/messages/{}",
+                urlish(inbox_id),
+                urlish(message_id),
+            ),
+            &[],
+            None,
+        )
+        .await
+    }
+
     // ── Webhooks ─────────────────────────────────────────────────────────────
 
     /// POST /v0/webhooks, subscribe an HTTPS endpoint to events
@@ -426,6 +508,50 @@ pub struct SentMessage {
     pub message_id: String,
     /// Thread the message was filed under.
     pub thread_id: String,
+}
+
+/// Request body for [`Client::reply_to_message`] and
+/// [`Client::reply_all_to_message`]. The `to` field is derived from the
+/// parent message; at least one of `text`/`html` is required by the API.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct ReplyToMessage {
+    /// Carbon-copy recipients (in addition to those on the thread).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub cc: Vec<String>,
+    /// Blind-carbon-copy recipients.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub bcc: Vec<String>,
+    /// Plain-text body.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text: Option<String>,
+    /// HTML body.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub html: Option<String>,
+    /// Labels to attach to the reply.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub labels: Vec<String>,
+}
+
+/// Request body for [`Client::update_message`].
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct UpdateMessage {
+    /// Labels to add.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub add_labels: Vec<String>,
+    /// Labels to remove.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub remove_labels: Vec<String>,
+}
+
+/// The API's response to [`Client::update_message`]: the message id and its
+/// labels after the update.
+#[derive(Clone, Debug, Deserialize)]
+pub struct UpdatedMessage {
+    /// Id of the updated message.
+    pub message_id: String,
+    /// The message's labels after the update.
+    #[serde(default)]
+    pub labels: Vec<String>,
 }
 
 /// A message as the API returns it. List items are a subset of the full

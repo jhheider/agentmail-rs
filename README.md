@@ -51,7 +51,7 @@ cargo add agentmail-rs
 ```
 
 The crate publishes as `agentmail-rs` (the bare `agentmail` name was taken) but
-imports as `agentmail`.
+imports as `agentmail`. MSRV is **Rust 1.86**.
 
 ## Usage
 
@@ -66,11 +66,22 @@ let inbox = client
     })
     .await?; // my-agent@agentmail.to
 
+// The common case, in one line:
+client
+    .send_text(
+        &inbox.inbox_id,
+        "someone@example.com",
+        "Hello",
+        "Sent from an agent's own inbox.",
+    )
+    .await?;
+
+// Or build the full message for HTML, cc/bcc, attachments, labels:
 client
     .send_message(&inbox.inbox_id, agentmail::SendMessage {
         to: vec!["someone@example.com".into()],
         subject: Some("Hello".into()),
-        text: Some("Sent from an agent's own inbox.".into()),
+        html: Some("<p>Rich body.</p>".into()),
         ..Default::default()
     })
     .await?;
@@ -94,6 +105,12 @@ test that creates, exercises, and lists real inboxes against the API:
 AGENTMAIL_API_KEY=... cargo run --example smoke
 ```
 
+Receiving mail? The webhook example verifies a Svix-signed delivery end to end:
+
+```sh
+cargo run --example webhook --features webhook-verify
+```
+
 ## Parity
 
 This crate covers the full AgentMail API v0 surface that the official
@@ -109,6 +126,14 @@ Svix **webhook signature verification** helper here goes slightly beyond the
 SDKs (behind the `webhook-verify` feature).
 
 Changes land in the [changelog](CHANGELOG.md).
+
+## Contributing
+
+Issues and PRs are welcome. Wire shapes track AgentMail's
+[OpenAPI spec](https://docs.agentmail.to/openapi.json), so when adding or
+changing an endpoint, match the spec and add a `wiremock` test under
+`tests/http/` (the suite runs offline: `cargo test --all-features`). If you need
+a scope-mirrored endpoint variant that isn't bound yet, open an issue.
 
 ## License
 

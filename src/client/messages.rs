@@ -17,6 +17,28 @@ impl Client {
         .await
     }
 
+    /// Send a plain-text message to a single recipient: the common case, in one
+    /// line. For anything richer (HTML, cc/bcc, attachments, labels), build a
+    /// [`SendMessage`] and call [`Client::send_message`].
+    pub async fn send_text(
+        &self,
+        inbox_id: &str,
+        to: &str,
+        subject: &str,
+        text: &str,
+    ) -> Result<SentMessage, Error> {
+        self.send_message(
+            inbox_id,
+            SendMessage {
+                to: vec![to.to_string()],
+                subject: Some(subject.to_string()),
+                text: Some(text.to_string()),
+                ..Default::default()
+            },
+        )
+        .await
+    }
+
     /// GET /v0/inboxes/{inbox_id}/messages (first page; see
     /// [`Client::list_messages_page`]).
     pub async fn list_messages(&self, inbox_id: &str) -> Result<MessageList, Error> {

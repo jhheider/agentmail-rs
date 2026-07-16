@@ -32,8 +32,25 @@
 //!     .await?;
 //! # Ok(()) }
 //! ```
+//!
+//! # Coverage
+//!
+//! Inboxes, threads, messages (send/reply/forward/raw/batch), drafts,
+//! attachments, webhooks, domains, pods, allow/block lists, metrics, inbox
+//! events, API keys, organization, auth, and agent onboarding. Every list call
+//! is paginated (`Page`), and requests carry automatic retries with backoff.
+//!
+//! # Features
+//!
+//! - **`retries`** (default): automatic retries with exponential backoff. Turn
+//!   it off with `default-features = false` to drop the direct `tokio`
+//!   dependency; tune it with [`Client::with_retry_policy`].
+//! - **`webhook-verify`** (off by default): `verify_webhook_signature` for
+//!   Svix-signed webhook deliveries. Adds `ring` (already the rustls provider)
+//!   and `base64`.
 
 #![warn(missing_docs)]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 mod client;
 mod types;
@@ -44,6 +61,7 @@ mod verify;
 
 pub use types::*;
 #[cfg(feature = "webhook-verify")]
+#[cfg_attr(docsrs, doc(cfg(feature = "webhook-verify")))]
 pub use verify::*;
 
 /// The production API host. Override with `Client::new(key, base_url)` for
@@ -92,6 +110,7 @@ pub enum Error {
 ///
 /// Requires the `retries` feature (on by default).
 #[cfg(feature = "retries")]
+#[cfg_attr(docsrs, doc(cfg(feature = "retries")))]
 #[derive(Clone, Debug)]
 pub struct RetryPolicy {
     /// Extra attempts after the first. `0` disables retries.
@@ -168,6 +187,7 @@ impl Client {
     ///
     /// Requires the `retries` feature (on by default).
     #[cfg(feature = "retries")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "retries")))]
     pub fn with_retry_policy(mut self, policy: RetryPolicy) -> Self {
         self.retry_policy = policy;
         self

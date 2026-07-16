@@ -5,6 +5,29 @@ All notable changes to this crate are documented here. The format follows
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 API v0 upstream is pre-1.0; expect breaking releases while it settles.
 
+## [0.2.1] - 2026-07-16
+
+Polish release: no breaking changes.
+
+### Added
+
+- `Client::send_text(inbox_id, to, subject, text)`: the plain-text-to-one-
+  recipient send in one line.
+- `examples/webhook.rs`: end-to-end Svix webhook verification
+  (`--features webhook-verify`).
+
+### Changed
+
+- docs.rs: feature-gated items (`RetryPolicy`, `with_retry_policy`, the
+  `verify_*` helpers) now show an "available on feature" badge, and the
+  crate-level docs surface a Coverage + Features overview.
+- Resolved 44 `Client::` intra-doc links in the type modules that rendered as
+  plain text instead of hyperlinks on docs.rs.
+- README: MSRV (1.86) stated, `send_text` in the quickstart, webhook-example
+  and Contributing sections.
+- crates.io metadata: `async` keyword and `asynchronous` category for
+  discoverability.
+
 ## [0.2.0] - 2026-07-16
 
 Full coverage of the AgentMail API v0 surface exposed by the official SDKs, on

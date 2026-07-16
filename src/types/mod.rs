@@ -5,6 +5,8 @@
 
 use crate::util::QueryBuilder;
 
+mod agent;
+mod api_keys;
 mod attachments;
 mod auth;
 mod domains;
@@ -14,10 +16,13 @@ mod inboxes;
 mod lists;
 mod messages;
 mod metrics;
+mod organizations;
 mod pods;
 mod threads;
 mod webhooks;
 
+pub use agent::*;
+pub use api_keys::*;
 pub use attachments::*;
 pub use auth::*;
 pub use domains::*;
@@ -27,6 +32,7 @@ pub use inboxes::*;
 pub use lists::*;
 pub use messages::*;
 pub use metrics::*;
+pub use organizations::*;
 pub use pods::*;
 pub use threads::*;
 pub use webhooks::*;

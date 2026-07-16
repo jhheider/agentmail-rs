@@ -1,3 +1,4 @@
+mod account;
 mod attachments;
 mod auth;
 mod common;

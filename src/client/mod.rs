@@ -8,6 +8,8 @@ use reqwest::{Method, StatusCode};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
+mod agent;
+mod api_keys;
 mod attachments;
 mod auth;
 mod domains;
@@ -17,6 +19,7 @@ mod inboxes;
 mod lists;
 mod messages;
 mod metrics;
+mod organizations;
 mod pods;
 mod threads;
 mod webhooks;

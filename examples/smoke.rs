@@ -62,6 +62,29 @@ async fn main() -> Result<(), agentmail::Error> {
         sent.message_id, sent.thread_id
     );
 
+    // Threads: the send created one on the sender side.
+    let threads = client.list_threads(&sender.inbox_id).await?;
+    println!("sender threads: {}", threads.count);
+
+    // Drafts: create, read back, and delete (round-trip without a second send).
+    let draft = client
+        .create_draft(
+            &sender.inbox_id,
+            agentmail::CreateDraft {
+                to: vec![recipient.email.clone()],
+                subject: Some("agentmail smoke draft".into()),
+                text: Some("A draft, not sent.".into()),
+                ..Default::default()
+            },
+        )
+        .await?;
+    let fetched = client.get_draft(&sender.inbox_id, &draft.draft_id).await?;
+    println!("draft {} created and fetched", fetched.draft_id);
+    client
+        .delete_draft(&sender.inbox_id, &draft.draft_id)
+        .await?;
+    println!("draft deleted");
+
     // Delivery between agentmail.to inboxes is quick but not instant.
     for attempt in 1..=10 {
         tokio::time::sleep(std::time::Duration::from_secs(2)).await;

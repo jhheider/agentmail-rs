@@ -1,6 +1,28 @@
 use crate::common::*;
 
 #[tokio::test]
+async fn send_text_posts_minimal_body() {
+    let (server, client) = client().await;
+    Mock::given(method("POST"))
+        .and(path("/v0/inboxes/ib_1/messages/send"))
+        .and(body_json(serde_json::json!({
+            "to": ["a@b.c"], "subject": "Hi", "text": "Body"
+        })))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "message_id": "m1", "thread_id": "t1"
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let sent = client
+        .send_text("ib_1", "a@b.c", "Hi", "Body")
+        .await
+        .unwrap();
+    assert_eq!(sent.message_id, "m1");
+}
+
+#[tokio::test]
 async fn send_message_posts_json_body() {
     let (server, client) = client().await;
     Mock::given(method("POST"))

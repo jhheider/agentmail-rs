@@ -1,6 +1,6 @@
 [package]
 name = "agentmail-rs"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 # Floor set by edition 2024 (1.85) and icu/idna transitive deps (1.86).
 rust-version = "1.86"
@@ -11,8 +11,8 @@ repository = "https://github.com/jhheider/agentmail-rs"
 homepage = "https://github.com/jhheider/agentmail-rs"
 documentation = "https://docs.rs/agentmail-rs"
 readme = "README.md"
-keywords = ["email", "agentmail", "api", "client", "agents"]
-categories = ["api-bindings", "email", "web-programming"]
+keywords = ["email", "agentmail", "api", "async", "agents"]
+categories = ["api-bindings", "email", "asynchronous", "web-programming"]
 
 # Published as agentmail-rs (the bare `agentmail` name is taken on crates.io by
 # an unrelated project), but imported as `agentmail`.
@@ -54,5 +54,13 @@ base64 = { version = "0.22", optional = true }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 wiremock = "0.6"
 
+# The webhook example needs the verification helpers.
+[[example]]
+name = "webhook"
+required-features = ["webhook-verify"]
+
 [package.metadata.docs.rs]
 all-features = true
+# Enables the `docsrs` cfg so feature-gated items render their "available on
+# feature X" badge (see the #[cfg_attr(docsrs, doc(cfg(...)))] attributes).
+rustdoc-args = ["--cfg", "docsrs"]

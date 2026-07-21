@@ -6,12 +6,12 @@
 //! API v0), with full coverage of the surface the official SDKs expose:
 //! inboxes, threads, messages, drafts, attachments, webhooks, domains, pods,
 //! allow/block lists, metrics, API keys, and agent onboarding. Everything
-//! deserializes permissively - unknown fields are ignored, optional fields
+//! deserializes permissively: unknown fields are ignored, optional fields
 //! default, so spec additions don't break callers.
 //!
 //! Resources that exist at more than one scope (threads, webhooks, lists,
-//! domains, ...) are reached through a scope handle - [`Client::org`],
-//! [`Client::inbox`], or [`Client::pod`] - so the compiler rejects an
+//! domains, ...) are reached through a scope handle ([`Client::org`],
+//! [`Client::inbox`], or [`Client::pod`]), so the compiler rejects an
 //! operation the scope doesn't support. Inbox-only resources (messages, drafts)
 //! live on [`Client::inbox`].
 //!
@@ -95,7 +95,7 @@ pub enum Error {
         /// The response body, verbatim (AgentMail sends JSON error details).
         body: String,
     },
-    /// A 2xx answer whose body didn't decode into the expected type - either
+    /// A 2xx answer whose body didn't decode into the expected type: either
     /// a bug in this crate's wire shapes or a breaking change in the API.
     #[error("undecodable AgentMail response ({reason}): {body}")]
     Decode {

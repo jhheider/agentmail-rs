@@ -1,12 +1,12 @@
 //! Type-level API scopes. Most AgentMail resources exist at more than one
-//! scope - organization-wide, within a single inbox, or within a pod - at the
+//! scope (organization-wide, within a single inbox, or within a pod) at the
 //! same URL shape under a different prefix. Rather than duplicate every method
 //! per scope, each scope is a zero-cost marker type ([`OrgScope`], [`InboxScope`],
 //! [`PodScope`]) and each resource is a capability trait ([`Threads`], [`Domains`],
 //! ...) implemented only for the scopes that support it. The [`Scoped`] handle
 //! carries the scope, and a resource's methods live in one generic
-//! `impl<S: Capability> Scoped<'_, S>` block, so the compiler - not a runtime
-//! 404 - rejects `client.inbox(id).list_domains()` (inboxes have no domains).
+//! `impl<S: Capability> Scoped<'_, S>` block, so the compiler (not a runtime
+//! 404) rejects `client.inbox(id).list_domains()` (inboxes have no domains).
 //!
 //! Get a handle from [`Client::org`](crate::Client::org), [`Client::inbox`](crate::Client::inbox), or [`Client::pod`](crate::Client::pod).
 
@@ -128,7 +128,7 @@ impl Client {
     /// Scope operations to a single inbox. Inbox-only resources (messages,
     /// events, draft writes) live here.
     ///
-    /// The scope's capabilities are enforced at compile time - an inbox has no
+    /// The scope's capabilities are enforced at compile time: an inbox has no
     /// domains, so this does not compile:
     ///
     /// ```compile_fail

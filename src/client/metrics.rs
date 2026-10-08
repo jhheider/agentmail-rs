@@ -28,4 +28,18 @@ impl<S: Metrics> Scoped<'_, S> {
             )
             .await
     }
+
+    /// GET `{scope}/metrics/rates`, bounce/complaint rates bucketed over time,
+    /// keyed by rate type. Set [`MetricsQuery::window`] to pick the window
+    /// each rate is computed over.
+    pub async fn get_metrics_rates(&self, query: MetricsQuery) -> Result<MetricsRates, Error> {
+        self.client
+            .request(
+                reqwest::Method::GET,
+                &format!("{}/metrics/rates", self.base()),
+                &query.query("rate_types"),
+                None::<&NoBody>,
+            )
+            .await
+    }
 }

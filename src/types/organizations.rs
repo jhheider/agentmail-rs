@@ -21,6 +21,15 @@ pub struct Organization {
     /// Billing plan type, when set.
     #[serde(default)]
     pub billing_type: Option<String>,
+    /// Billing account id, when set.
+    #[serde(default)]
+    pub billing_id: Option<String>,
+    /// Active billing subscription id, when set.
+    #[serde(default)]
+    pub billing_subscription_id: Option<String>,
+    /// Authentication provider id, when set.
+    #[serde(default)]
+    pub authentication_id: Option<String>,
     /// Authentication provider type, when set.
     #[serde(default)]
     pub authentication_type: Option<String>,

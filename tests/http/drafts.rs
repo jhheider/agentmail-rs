@@ -140,3 +140,49 @@ async fn create_draft_skips_empty_in_reply_to() {
     let obj = body.as_object().unwrap();
     assert!(!obj.contains_key("in_reply_to"));
 }
+
+#[tokio::test]
+async fn update_draft_serializes_attachment_delta() {
+    let body = serde_json::to_value(agentmail::UpdateDraft {
+        add_attachments: vec![agentmail::SendAttachment {
+            filename: Some("new.txt".into()),
+            content: Some("aGk=".into()),
+            ..Default::default()
+        }],
+        remove_attachments: vec!["att_1".into()],
+        reply_to: Some(vec!["reply@b.c".into()]),
+        ..Default::default()
+    })
+    .unwrap();
+    assert_eq!(
+        body["add_attachments"][0]["filename"],
+        serde_json::json!("new.txt")
+    );
+    assert_eq!(body["remove_attachments"], serde_json::json!(["att_1"]));
+    assert_eq!(body["reply_to"], serde_json::json!(["reply@b.c"]));
+    // Unset delta fields stay out of the body.
+    assert!(body.get("add_labels").is_none());
+}
+
+#[tokio::test]
+async fn draft_decodes_send_status_and_references() {
+    let (server, client) = client().await;
+    Mock::given(method("GET"))
+        .and(path("/v0/inboxes/ib_1/drafts/d1"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "draft_id": "d1", "inbox_id": "ib_1",
+            "labels": ["draft"], "preview": "Hi…",
+            "reply_to": ["reply@b.c"], "references": ["<m1@b.c>"],
+            "send_status": "scheduled", "send_at": "2026-03-01T09:00:00Z",
+            "client_id": "cid_1", "updated_at": "2026-01-01T00:00:00Z",
+            "created_at": "2026-01-01T00:00:00Z"
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let draft = client.inbox("ib_1").get_draft("d1").await.unwrap();
+    assert_eq!(draft.send_status.as_deref(), Some("scheduled"));
+    assert_eq!(draft.references, vec!["<m1@b.c>"]);
+    assert_eq!(draft.preview.as_deref(), Some("Hi…"));
+}

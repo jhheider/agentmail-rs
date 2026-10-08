@@ -30,6 +30,10 @@ pub struct Attachment {
     /// When `download_url` expires (RFC 3339).
     #[serde(default)]
     pub expires_at: Option<String>,
+    /// Presigned URL to the API's text extraction of this attachment, when
+    /// one exists (attachment-download responses).
+    #[serde(default)]
+    pub text_url: Option<String>,
 }
 
 /// An attachment to include on an outgoing message or draft. Supply the bytes

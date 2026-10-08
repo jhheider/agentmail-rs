@@ -78,3 +78,42 @@ async fn list_inbox_events_paginates() {
     assert_eq!(events.count, 1);
     assert_eq!(events.events[0].event_id, "ev_1");
 }
+
+#[tokio::test]
+async fn get_metrics_rates_at_all_scopes() {
+    let (server, client) = client().await;
+    for p in [
+        "/v0/metrics/rates",
+        "/v0/inboxes/ib_1/metrics/rates",
+        "/v0/pods/pod_1/metrics/rates",
+    ] {
+        Mock::given(method("GET"))
+            .and(path(p))
+            .and(query_param("rate_types", "bounce"))
+            .and(query_param("window", "86400"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "bounce": [
+                    {"timestamp": "2026-01-01T00:00:00Z", "rate": 0.02, "sent": 100},
+                    {"timestamp": "2026-01-02T00:00:00Z", "rate": 0.0, "sent": 50}
+                ]
+            })))
+            .expect(1)
+            .mount(&server)
+            .await;
+    }
+    let q = agentmail::MetricsQuery {
+        types: vec!["bounce".into()],
+        window: Some(86400),
+        ..Default::default()
+    };
+    for scope_rates in [
+        client.org().get_metrics_rates(q.clone()).await,
+        client.inbox("ib_1").get_metrics_rates(q.clone()).await,
+        client.pod("pod_1").get_metrics_rates(q).await,
+    ] {
+        let rates = scope_rates.unwrap();
+        assert_eq!(rates["bounce"].len(), 2);
+        assert_eq!(rates["bounce"][0].rate, Some(0.02));
+        assert_eq!(rates["bounce"][0].sent, Some(100));
+    }
+}

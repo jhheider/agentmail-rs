@@ -85,4 +85,62 @@ impl<S: Inboxes> Scoped<'_, S> {
             )
             .await
     }
+
+    /// GET `{scope}/inboxes/search`, full-text search over the scope's
+    /// inboxes (display name, address, metadata).
+    pub async fn search_inboxes(&self, q: &str, page: Page) -> Result<InboxList, Error> {
+        let mut query = page.query();
+        query.push(("q", q.to_string()));
+        self.client
+            .request(
+                reqwest::Method::GET,
+                &format!("{}/inboxes/search", self.base()),
+                &query,
+                None::<&NoBody>,
+            )
+            .await
+    }
+
+    /// Every inbox matching `q`, draining pagination.
+    pub async fn list_all_matching_inboxes(&self, q: &str) -> Result<Vec<Inbox>, Error> {
+        let mut out = Vec::new();
+        let mut token = None;
+        loop {
+            let resp = self
+                .search_inboxes(
+                    q,
+                    Page {
+                        limit: None,
+                        page_token: token,
+                    },
+                )
+                .await?;
+            let next = resp.next_page_token;
+            out.extend(resp.inboxes);
+            match next {
+                Some(t) => token = Some(t),
+                None => return Ok(out),
+            }
+        }
+    }
+}
+
+impl Scoped<'_, crate::client::scope::InboxScope<'_>> {
+    /// POST `/v0/inboxes/{inbox_id}/authorize`, complete the browser
+    /// authorization flow for this inbox: the human approves in their browser,
+    /// and this call exchanges the resulting `auth_token` for a scoped API
+    /// key ([`AuthorizeInboxResult::api_key_id`]).
+    pub async fn authorize(
+        &self,
+        authorize: AuthorizeInbox,
+    ) -> Result<AuthorizeInboxResult, Error> {
+        self.client
+            .request(
+                reqwest::Method::POST,
+                &format!("/v0/inboxes/{}/authorize", urlish(self.scope.0)),
+                &[],
+                Some(&authorize),
+            )
+            .await
+    }
 }

@@ -26,4 +26,14 @@ impl Client {
         )
         .await
     }
+
+    /// POST /v0/agent/human, email a claim link that connects a human to this
+    /// agent's organization. They complete the link in their browser.
+    pub async fn agent_attach_human(
+        &self,
+        attach: AgentAttachHuman,
+    ) -> Result<AgentAttachHumanResult, Error> {
+        self.request(reqwest::Method::POST, "/v0/agent/human", &[], Some(&attach))
+            .await
+    }
 }

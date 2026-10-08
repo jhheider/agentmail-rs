@@ -5,10 +5,13 @@
 
 use crate::util::QueryBuilder;
 
+mod accounts;
 mod agent;
 mod api_keys;
+mod apps;
 mod attachments;
 mod auth;
+mod calendar;
 mod domains;
 mod drafts;
 mod inbox_events;
@@ -21,10 +24,13 @@ mod pods;
 mod threads;
 mod webhooks;
 
+pub use accounts::*;
 pub use agent::*;
 pub use api_keys::*;
+pub use apps::*;
 pub use attachments::*;
 pub use auth::*;
+pub use calendar::*;
 pub use domains::*;
 pub use drafts::*;
 pub use inbox_events::*;

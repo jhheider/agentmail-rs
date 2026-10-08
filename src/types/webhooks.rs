@@ -16,6 +16,9 @@ pub struct CreateWebhook {
     /// Your own idempotency/reference id for this webhook.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub client_id: Option<String>,
+    /// Extra headers to send with every delivery.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub headers: Option<serde_json::Value>,
 }
 
 /// Request body for `update_webhook`. Every field is optional; leave
@@ -26,6 +29,9 @@ pub struct UpdateWebhook {
     /// Replace the subscribed event types.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub event_types: Vec<String>,
+    /// Pause (`false`) or resume (`true`) delivery.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
     /// Inboxes to add to the subscription.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub add_inbox_ids: Vec<String>,
@@ -58,6 +64,12 @@ pub struct Webhook {
     /// Pods the subscription is limited to; empty means all.
     #[serde(default)]
     pub pod_ids: Vec<String>,
+    /// The pod this webhook is scoped to, when created on a pod handle.
+    #[serde(default)]
+    pub pod_id: Option<String>,
+    /// The inbox this webhook is scoped to, when created on an inbox handle.
+    #[serde(default)]
+    pub inbox_id: Option<String>,
     /// Whether the subscription currently delivers.
     pub enabled: bool,
     /// Your own reference id, echoed back if set on creation.
@@ -81,4 +93,24 @@ pub struct WebhookList {
     /// Cursor for the next page; `None` on the last page.
     #[serde(default)]
     pub next_page_token: Option<String>,
+}
+
+/// Body for `update_webhook_headers`: headers to set or replace, plus names
+/// to remove. Applied to every delivery of that webhook.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct UpdateWebhookHeaders {
+    /// Headers to set or overwrite, sent verbatim with each delivery.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub headers: Option<serde_json::Value>,
+    /// Header names to delete from the subscription.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub remove_headers: Vec<String>,
+}
+
+/// The header names configured on a webhook, from `get_webhook_headers`
+/// (values are never returned).
+#[derive(Clone, Debug, Deserialize)]
+pub struct WebhookHeaderNames {
+    /// The configured header names.
+    pub header_names: Vec<String>,
 }

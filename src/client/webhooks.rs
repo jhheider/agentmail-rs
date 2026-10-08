@@ -90,4 +90,34 @@ impl<S: Webhooks> Scoped<'_, S> {
             )
             .await
     }
+
+    /// GET `{scope}/webhooks/{webhook_id}/headers`, the names of the extra
+    /// headers sent with each delivery (values are never returned).
+    pub async fn get_webhook_headers(&self, webhook_id: &str) -> Result<WebhookHeaderNames, Error> {
+        self.client
+            .request(
+                reqwest::Method::GET,
+                &format!("{}/webhooks/{}/headers", self.base(), urlish(webhook_id)),
+                &[],
+                None::<&NoBody>,
+            )
+            .await
+    }
+
+    /// PATCH `{scope}/webhooks/{webhook_id}/headers`, set/replace headers and
+    /// remove others by name. Responds 204 with no body.
+    pub async fn update_webhook_headers(
+        &self,
+        webhook_id: &str,
+        update: UpdateWebhookHeaders,
+    ) -> Result<(), Error> {
+        self.client
+            .request(
+                reqwest::Method::PATCH,
+                &format!("{}/webhooks/{}/headers", self.base(), urlish(webhook_id)),
+                &[],
+                Some(&update),
+            )
+            .await
+    }
 }

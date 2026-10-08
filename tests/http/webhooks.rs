@@ -62,3 +62,41 @@ async fn update_webhook_sends_delta_body() {
         .unwrap();
     assert_eq!(wh.webhook_id, "wh_1");
 }
+
+#[tokio::test]
+async fn get_and_update_webhook_headers() {
+    let (server, client) = client().await;
+    Mock::given(method("GET"))
+        .and(path("/v0/webhooks/wh_1/headers"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "header_names": ["X-Trace-Id", "X-Tenant"]
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("PATCH"))
+        .and(path("/v0/webhooks/wh_1/headers"))
+        .and(body_json(serde_json::json!({
+            "headers": {"X-Trace-Id": "abc"},
+            "remove_headers": ["X-Tenant"]
+        })))
+        .respond_with(ResponseTemplate::new(204))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let names = client.org().get_webhook_headers("wh_1").await.unwrap();
+    assert_eq!(names.header_names, vec!["X-Trace-Id", "X-Tenant"]);
+
+    client
+        .org()
+        .update_webhook_headers(
+            "wh_1",
+            agentmail::UpdateWebhookHeaders {
+                headers: Some(serde_json::json!({ "X-Trace-Id": "abc" })),
+                remove_headers: vec!["X-Tenant".into()],
+            },
+        )
+        .await
+        .unwrap();
+}

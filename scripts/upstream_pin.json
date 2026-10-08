@@ -1,0 +1,8 @@
+{
+  "repo": "agentmail-to/agentmail-docs",
+  "commit": "71b1d1f751176203f47c27ef274f1651d2b2ee6f",
+  "pinned_at": "2026-10-07T23:34:13Z",
+  "note": "The AgentMail API the crate currently binds. openapi.json is served at https://docs.agentmail.to/openapi.json and is a fern build of this repo (base-openapi.json + overrides). agent_sign_up/verify/spec reference: agentmail-to/agentmail-python v2.0.14.",
+  "spec_version": "1.0.0",
+  "spec_sha256": "42b3bea1c434c240bb1c22da36427920c537a981dcd5d370b1c59fa290d09e61"
+}

@@ -37,6 +37,9 @@ pub struct SendMessage {
     /// Extra headers to set on the outgoing message.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub headers: Option<serde_json::Value>,
+    /// Ask the API to make open tracking available for this message.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub track_opens: Option<bool>,
 }
 /// The API's acknowledgement of a send.
 #[derive(Clone, Debug, Deserialize)]
@@ -47,10 +50,17 @@ pub struct SentMessage {
     pub thread_id: String,
 }
 /// Request body for `reply_to_message` and
-/// `reply_all_to_message`. The `to` field is derived from the
-/// parent message; at least one of `text`/`html` is required by the API.
+/// `reply_all_to_message`. `to` overrides the derived recipients when
+/// non-empty; at least one of `text`/`html` is required by the API.
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct ReplyToMessage {
+    /// Recipient override; empty means derive from the parent message.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub to: Vec<String>,
+    /// Treat the reply as a reply-all (server-side convenience flag for
+    /// `reply_to_message`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reply_all: Option<bool>,
     /// Carbon-copy recipients (in addition to those on the thread).
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub cc: Vec<String>,
@@ -72,6 +82,9 @@ pub struct ReplyToMessage {
     /// Extra headers to set on the outgoing message.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub headers: Option<serde_json::Value>,
+    /// Ask the API to make open tracking available for this reply.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub track_opens: Option<bool>,
 }
 
 /// The presigned download for a message's raw RFC 822 source, from
@@ -150,8 +163,8 @@ pub struct UpdatedMessage {
     #[serde(default)]
     pub labels: Vec<String>,
 }
-/// A message as the API returns it. List items are a subset of the full
-/// get-message shape; every non-id field defaults so both parse.
+/// A message as the API returns it. List and search items are a subset of the
+/// full get-message shape; every non-id field defaults so all three parse.
 #[derive(Clone, Debug, Deserialize)]
 pub struct Message {
     /// Unique id within the inbox.
@@ -168,6 +181,15 @@ pub struct Message {
     /// Recipient addresses.
     #[serde(default)]
     pub to: Vec<String>,
+    /// Addresses replied to, when set.
+    #[serde(default)]
+    pub reply_to: Vec<String>,
+    /// Carbon-copy recipients.
+    #[serde(default)]
+    pub cc: Vec<String>,
+    /// Blind-carbon-copy recipients.
+    #[serde(default)]
+    pub bcc: Vec<String>,
     /// Subject line.
     #[serde(default)]
     pub subject: Option<String>,
@@ -180,6 +202,12 @@ pub struct Message {
     /// Full HTML body (get responses).
     #[serde(default)]
     pub html: Option<String>,
+    /// Plain-text body extracted from attachments by the API.
+    #[serde(default)]
+    pub extracted_text: Option<String>,
+    /// HTML body extracted from attachments by the API.
+    #[serde(default)]
+    pub extracted_html: Option<String>,
     /// Labels on the message (e.g. `received`, `unread`).
     #[serde(default)]
     pub labels: Vec<String>,
@@ -189,6 +217,30 @@ pub struct Message {
     /// Attachments on the message (present in get-message responses).
     #[serde(default)]
     pub attachments: Vec<Attachment>,
+    /// `Message-ID` of the message this one replies to, when set.
+    #[serde(default)]
+    pub in_reply_to: Option<String>,
+    /// `References` chain of `Message-ID`s, when set.
+    #[serde(default)]
+    pub references: Vec<String>,
+    /// Extra headers on the message, when set.
+    #[serde(default)]
+    pub headers: Option<serde_json::Value>,
+    /// Calendar event attached to the message, when it carries an invite.
+    #[serde(default)]
+    pub calendar_event_id: Option<String>,
+    /// Total message size in bytes.
+    #[serde(default)]
+    pub size: Option<u64>,
+    /// Timestamp the message was last updated (RFC 3339).
+    #[serde(default)]
+    pub updated_at: Option<String>,
+    /// Timestamp the message was created (RFC 3339).
+    #[serde(default)]
+    pub created_at: Option<String>,
+    /// Search-highlight fragments, present in search responses.
+    #[serde(default)]
+    pub highlights: Option<serde_json::Value>,
 }
 /// One page of messages from `list_messages_page`.
 #[derive(Clone, Debug, Deserialize)]

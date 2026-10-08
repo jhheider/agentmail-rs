@@ -12,19 +12,25 @@
 > change; pin a version and read the changelog.
 
 A typed, `async` client for [AgentMail](https://agentmail.to), the email API
-for agents, with **full coverage of the AgentMail API v0** at every scope:
+for agents, with **full coverage of the AgentMail REST API** at every scope:
 
-- **Inboxes**: create / list / get / update / delete
+- **Inboxes**: create / list / search / get / update / delete / authorize
 - **Threads**: list / filter / search / get / update / delete
 - **Messages**: send / list / filter / search / get / update / delete, reply,
-  reply-all, forward, raw source, batch get / update
-- **Drafts**: create / list / get / update / delete / send
+  reply-all, forward, raw source, batch get / update, open tracking
+- **Drafts**: create / list / get / update / delete / send, attachment deltas
 - **Attachments**: fetch metadata and download bytes (presigned)
-- **Webhooks**: create / list / get / update / delete, plus optional Svix
-  signature verification
-- **Domains**: create / list / get / update / delete, verify, zone file
-- **Pods**, **allow/block lists**, **metrics** (events + usage), **inbox
-  events**, **API keys**, **organization**, and **agent** sign-up / verify
+- **Webhooks**: create / list / get / update / delete, custom delivery
+  headers, plus optional Svix signature verification
+- **Domains**: create / list / get / update / delete, verify, zone file,
+  provider setup link
+- **Calendars**: settings, agenda, events (create / get / update / delete),
+  recurring-series instances, invite responses
+- **Accounts** (human app connections) and **apps** (directory, search,
+  connect flow)
+- **Pods**, **allow/block lists**, **metrics** (events + usage + rates),
+  **inbox events**, **API keys** (bearer and public-key), **organization**,
+  and **agent** sign-up / verify / attach-human
 - **Pagination** on every list call, `list_all_*` helpers that drain it, and
   **automatic retries** with exponential backoff
 
@@ -132,15 +138,37 @@ cargo run --example webhook --features webhook-verify
 
 ## Parity
 
-This crate binds the **entire AgentMail API v0 surface** the official
-Python/TypeScript SDKs expose, at **all three scopes** (organization, inbox,
-pod) via the typed scope handles above.
+This crate binds the **entire AgentMail API** the official Python/TypeScript
+SDKs expose over REST, at **all three scopes** (organization, inbox, pod) via
+the typed scope handles above — inboxes, threads, messages, drafts,
+attachments, webhooks, domains, pods, allow/block lists, metrics, calendars,
+accounts, apps, API keys, organization, auth, and agent onboarding.
 
-Two things the official SDKs also lack and this crate treats as extras: there
-is **no WebSocket / realtime** API to bind (AgentMail exposes none), and the
-Svix **webhook signature verification** helper here goes slightly beyond the
-SDKs (behind the `webhook-verify` feature). Beyond the SDKs, the `list_all_*`
-helpers drain pagination for you.
+One known gap: the official SDKs' **WebSocket / realtime** event stream
+(`client.websockets` in agentmail-python) is not bound here — it needs a
+websocket client dependency; file an issue if you want it. Extras beyond the
+SDKs: the Svix **webhook signature verification** helper (behind the
+`webhook-verify` feature) and the `list_all_*` helpers that drain pagination.
+
+### Tracking upstream drift
+
+Wire shapes track AgentMail's
+[OpenAPI spec](https://docs.agentmail.to/openapi.json), which changes often
+(the official SDKs ship near-daily). The upstream commit this crate was
+built against is pinned in
+[`scripts/upstream_pin.json`](scripts/upstream_pin.json), and
+[`scripts/drift_check.py`](scripts/drift_check.py) diffs the live spec
+against the surface this crate actually binds (operations and model fields).
+CI runs it weekly (`.github/workflows/drift.yml`) and opens an issue on
+drift; locally:
+
+```sh
+python3 scripts/drift_check.py           # report against the live spec
+python3 scripts/drift_check.py --check   # exit 1 on drift
+```
+
+After binding new upstream surface, re-pin `scripts/upstream_pin.json` to the
+commit you built against.
 
 Changes land in the [changelog](CHANGELOG.md).
 

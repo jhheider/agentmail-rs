@@ -59,4 +59,37 @@ impl<S: ApiKeys> Scoped<'_, S> {
             )
             .await
     }
+
+    /// PATCH `{scope}/api-keys/{api_key_id}`, rename the key and/or replace
+    /// its permission set.
+    pub async fn update_api_key(
+        &self,
+        api_key_id: &str,
+        update: UpdateApiKey,
+    ) -> Result<ApiKey, Error> {
+        self.client
+            .request(
+                reqwest::Method::PATCH,
+                &format!("{}/api-keys/{}", self.base(), urlish(api_key_id)),
+                &[],
+                Some(&update),
+            )
+            .await
+    }
+}
+
+/// Single-key reads exist only at the organization scope.
+impl Scoped<'_, crate::client::scope::OrgScope> {
+    /// GET `/v0/api-keys/{api_key_id}`. The inbox and pod scopes expose
+    /// create/list/update/delete for their keys but no per-key read.
+    pub async fn get_api_key(&self, api_key_id: &str) -> Result<ApiKey, Error> {
+        self.client
+            .request(
+                reqwest::Method::GET,
+                &format!("/v0/api-keys/{}", urlish(api_key_id)),
+                &[],
+                None::<&NoBody>,
+            )
+            .await
+    }
 }

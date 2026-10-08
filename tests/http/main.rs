@@ -1,6 +1,8 @@
 mod account;
+mod apps;
 mod attachments;
 mod auth;
+mod calendar;
 mod common;
 mod core;
 mod domains;

@@ -113,3 +113,19 @@ impl<S: Domains> Scoped<'_, S> {
             .await
     }
 }
+
+/// Provider setup links exist only at the organization scope.
+impl Scoped<'_, crate::client::scope::OrgScope> {
+    /// GET `/v0/domains/{domain_id}/setup-link`, a one-click DNS setup flow
+    /// for the domain's provider, when one is [`DomainSetupLink::supported`].
+    pub async fn get_domain_setup_link(&self, domain_id: &str) -> Result<DomainSetupLink, Error> {
+        self.client
+            .request(
+                reqwest::Method::GET,
+                &format!("/v0/domains/{}/setup-link", urlish(domain_id)),
+                &[],
+                None::<&NoBody>,
+            )
+            .await
+    }
+}

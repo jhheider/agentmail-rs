@@ -121,3 +121,50 @@ async fn verify_domain_and_zone_file() {
     let zone = client.org().get_domain_zone_file("dom_1").await.unwrap();
     assert!(zone.contains("v=spf1"));
 }
+
+#[tokio::test]
+async fn get_domain_setup_link_is_org_only() {
+    let (server, client) = client().await;
+    Mock::given(method("GET"))
+        .and(path("/v0/domains/dom_1/setup-link"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "supported": true,
+            "provider_name": "Cloudflare",
+            "url": "https://dash.example.com/setup?state=s1",
+            "width": 240, "height": 240, "state": "s1"
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let link = client.org().get_domain_setup_link("dom_1").await.unwrap();
+    assert!(link.supported);
+    assert_eq!(link.provider_name.as_deref(), Some("Cloudflare"));
+}
+
+#[tokio::test]
+async fn domain_decodes_tracking_and_inbound_flags() {
+    let (server, client) = client().await;
+    Mock::given(method("GET"))
+        .and(path("/v0/domains/dom_2"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "domain_id": "dom_2", "domain": "mail.example.com",
+            "status": "VERIFIED", "reason": "dkim aligned",
+            "feedback_enabled": true, "inbound_enabled": true,
+            "subdomains_enabled": false, "tracking_enabled": true,
+            "records": [{"type": "TXT", "name": "mail.example.com",
+                         "value": "v=spf1", "status": "VALID",
+                         "reason": "matched"}],
+            "updated_at": "2026-01-01T00:00:00Z",
+            "created_at": "2026-01-01T00:00:00Z"
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let domain = client.org().get_domain("dom_2").await.unwrap();
+    assert_eq!(domain.tracking_enabled, Some(true));
+    assert_eq!(domain.inbound_enabled, Some(true));
+    assert_eq!(domain.reason.as_deref(), Some("dkim aligned"));
+    assert_eq!(domain.records[0].reason.as_deref(), Some("matched"));
+}

@@ -134,3 +134,69 @@ async fn scope_prefixes_org_inbox_pod() {
         .await
         .unwrap();
 }
+
+#[tokio::test]
+async fn inbox_search_at_org_and_pod_scopes() {
+    let (server, client) = client().await;
+    for p in ["/v0/inboxes/search", "/v0/pods/pod_1/inboxes/search"] {
+        Mock::given(method("GET"))
+            .and(path(p))
+            .and(query_param("q", "velvet"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "count": 1,
+                "inboxes": [{
+                    "inbox_id": "ib_9", "email": "velvet@agentmail.to",
+                    "status": "paused", "metadata": {"team": "ops"},
+                    "updated_at": "2026-01-01T00:00:00Z",
+                    "created_at": "2026-01-01T00:00:00Z"
+                }]
+            })))
+            .expect(1)
+            .mount(&server)
+            .await;
+    }
+
+    for found in [
+        client
+            .org()
+            .search_inboxes("velvet", Default::default())
+            .await,
+        client
+            .pod("pod_1")
+            .search_inboxes("velvet", Default::default())
+            .await,
+    ] {
+        let list = found.unwrap();
+        assert_eq!(list.count, 1);
+        assert_eq!(list.inboxes[0].email, "velvet@agentmail.to");
+        assert_eq!(list.inboxes[0].status.as_deref(), Some("paused"));
+        assert_eq!(list.inboxes[0].metadata.as_ref().unwrap()["team"], "ops");
+    }
+}
+
+#[tokio::test]
+async fn authorize_inbox_exchanges_auth_token() {
+    let (server, client) = client().await;
+    Mock::given(method("POST"))
+        .and(path("/v0/inboxes/ib_1/authorize"))
+        .and(body_json(serde_json::json!({
+            "auth_token": "tok_123", "accept_disclosure": true
+        })))
+        .respond_with(ResponseTemplate::new(202).set_body_json(serde_json::json!({
+            "api_key_id": "key_9",
+            "instructions": "Authorization complete. Return to browser."
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let result = client
+        .inbox("ib_1")
+        .authorize(agentmail::AuthorizeInbox {
+            auth_token: "tok_123".into(),
+            accept_disclosure: Some(true),
+        })
+        .await
+        .unwrap();
+    assert_eq!(result.api_key_id, "key_9");
+}

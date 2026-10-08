@@ -16,6 +16,9 @@ pub struct CreateInbox {
     /// Your own idempotency/reference id for this inbox.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub client_id: Option<String>,
+    /// Initial traffic state: `active` (default) or `paused`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
     /// Arbitrary JSON stored alongside the inbox.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<serde_json::Value>,
@@ -28,6 +31,9 @@ pub struct UpdateInbox {
     /// Replace the human-readable sender name.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display_name: Option<String>,
+    /// `active` to resume traffic, `paused` to hold it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
     /// Replace the stored metadata.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<serde_json::Value>,
@@ -48,6 +54,15 @@ pub struct Inbox {
     /// Your reference id from creation, when set.
     #[serde(default)]
     pub client_id: Option<String>,
+    /// Whether the inbox accepts traffic: `active` or `paused`.
+    #[serde(default)]
+    pub status: Option<String>,
+    /// Arbitrary JSON stored alongside the inbox.
+    #[serde(default)]
+    pub metadata: Option<serde_json::Value>,
+    /// RFC 3339 last-update timestamp.
+    #[serde(default)]
+    pub updated_at: Option<String>,
     /// RFC 3339 creation timestamp.
     #[serde(default)]
     pub created_at: Option<String>,
@@ -63,4 +78,24 @@ pub struct InboxList {
     /// Cursor for the next page; `None` on the last page.
     #[serde(default)]
     pub next_page_token: Option<String>,
+}
+
+/// Body for `authorize_inbox`: complete a human authorization started in the
+/// browser. The `auth_token` comes from that flow.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct AuthorizeInbox {
+    /// The one-time token from the browser authorization flow.
+    pub auth_token: String,
+    /// Confirm the app's disclosure on the human's behalf.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub accept_disclosure: Option<bool>,
+}
+
+/// The response to `authorize_inbox`.
+#[derive(Clone, Debug, Deserialize)]
+pub struct AuthorizeInboxResult {
+    /// The API key minted for the authorized inbox.
+    pub api_key_id: String,
+    /// What to do next (return to the browser).
+    pub instructions: String,
 }

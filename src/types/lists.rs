@@ -70,6 +70,18 @@ pub struct ListEntry {
     /// The organization the entry belongs to.
     #[serde(default)]
     pub organization_id: Option<String>,
+    /// Traffic direction this entry governs: `send`, `receive`, or `reply`.
+    #[serde(default)]
+    pub direction: Option<String>,
+    /// Whether this is an `allow` or `block` entry.
+    #[serde(default)]
+    pub list_type: Option<String>,
+    /// Owning pod, when the account uses pods.
+    #[serde(default)]
+    pub pod_id: Option<String>,
+    /// Constrained inbox, when the entry is inbox-scoped.
+    #[serde(default)]
+    pub inbox_id: Option<String>,
     /// Whether the entry is read-only (system-managed).
     #[serde(default)]
     pub read_only: bool,

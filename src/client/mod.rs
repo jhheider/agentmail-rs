@@ -8,10 +8,13 @@ use reqwest::{Method, StatusCode};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
+mod accounts;
 mod agent;
 mod api_keys;
+mod apps;
 mod attachments;
 mod auth;
+mod calendar;
 mod domains;
 mod drafts;
 mod inbox_events;
@@ -46,12 +49,40 @@ impl Client {
         T: DeserializeOwned,
         B: Serialize + ?Sized,
     {
-        let (status, text) = self.execute(method, path, query, body).await?;
+        self.request_with_headers(method, path, query, body, &[])
+            .await
+    }
+
+    /// Send an authenticated bodiless request and return the raw response body
+    /// as text, for the non-JSON endpoints (e.g. a domain zone file).
+    pub(crate) async fn request_text(&self, method: Method, path: &str) -> Result<String, Error> {
+        let (status, text) = self
+            .execute(method, path, &[], None::<&NoBody>, &[])
+            .await?;
         if !status.is_success() {
             return Err(Error::Api { status, body: text });
         }
-        // DELETE endpoints answer with an empty body; map that to null so
-        // `()` (unit) deserializes.
+        Ok(text)
+    }
+
+    /// Like [`Client::request`] but with extra request headers, for endpoints
+    /// that need them (calendar writes carry `If-Match` etags).
+    pub(crate) async fn request_with_headers<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(&str, String)],
+        body: Option<&B>,
+        headers: &[(&'static str, String)],
+    ) -> Result<T, Error>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        let (status, text) = self.execute(method, path, query, body, headers).await?;
+        if !status.is_success() {
+            return Err(Error::Api { status, body: text });
+        }
         let text = if text.trim().is_empty() {
             "null"
         } else {
@@ -63,16 +94,6 @@ impl Client {
         })
     }
 
-    /// Send an authenticated bodiless request and return the raw response body
-    /// as text, for the non-JSON endpoints (e.g. a domain zone file).
-    pub(crate) async fn request_text(&self, method: Method, path: &str) -> Result<String, Error> {
-        let (status, text) = self.execute(method, path, &[], None::<&NoBody>).await?;
-        if !status.is_success() {
-            return Err(Error::Api { status, body: text });
-        }
-        Ok(text)
-    }
-
     /// Build an authenticated request. Shared by every attempt of `execute`.
     fn build_request<B>(
         &self,
@@ -80,6 +101,7 @@ impl Client {
         url: &str,
         query: &[(&str, String)],
         body: Option<&B>,
+        headers: &[(&'static str, String)],
     ) -> reqwest::RequestBuilder
     where
         B: Serialize + ?Sized,
@@ -87,6 +109,9 @@ impl Client {
         let mut req = self.http.request(method, url).bearer_auth(&self.api_key);
         if !query.is_empty() {
             req = req.query(query);
+        }
+        for (name, value) in headers {
+            req = req.header(*name, value);
         }
         if let Some(body) = body {
             req = req.json(body);
@@ -105,6 +130,7 @@ impl Client {
         path: &str,
         query: &[(&str, String)],
         body: Option<&B>,
+        headers: &[(&'static str, String)],
     ) -> Result<(StatusCode, String), Error>
     where
         B: Serialize + ?Sized,
@@ -115,7 +141,7 @@ impl Client {
         loop {
             // Bodies are always in-memory, so a retry can re-serialize freely.
             match self
-                .build_request(method.clone(), &url, query, body)
+                .build_request(method.clone(), &url, query, body, headers)
                 .send()
                 .await
             {
@@ -151,12 +177,16 @@ impl Client {
         path: &str,
         query: &[(&str, String)],
         body: Option<&B>,
+        headers: &[(&'static str, String)],
     ) -> Result<(StatusCode, String), Error>
     where
         B: Serialize + ?Sized,
     {
         let url = format!("{}{path}", self.base_url);
-        let resp = self.build_request(method, &url, query, body).send().await?;
+        let resp = self
+            .build_request(method, &url, query, body, headers)
+            .send()
+            .await?;
         let status = resp.status();
         let text = resp.text().await.unwrap_or_default();
         Ok((status, text))

@@ -5,6 +5,69 @@ All notable changes to this crate are documented here. The format follows
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 API v0 upstream is pre-1.0; expect breaking releases while it settles.
 
+## [0.4.0] - 2026-10-07
+
+Catches up with ~3 months of upstream drift (the API spec is now `1.0.0` and
+the official SDKs ship near-daily): full REST surface parity again, plus a
+weekly drift checker.
+
+### Added
+
+- **Calendars** (inbox scope): `get_calendar` / `update_calendar` (with
+  `If-Match` etags), `get_agenda`, `list_calendar_events`,
+  `create_calendar_event`, `get_calendar_event`, `update_calendar_event`
+  (series `MutationMode`), `delete_calendar_event`, `list_calendar_event_instances`,
+  `respond_to_calendar_event`, and the full `CalendarEvent` model
+  (recurrence, attendees, duration modes, revisions).
+- **Accounts** (human app connections): `list_accounts` /
+  `get_account` / `update_account` at the org scope, plus account reads
+  through inbox and pod handles.
+- **Apps**: `list_apps`, `search_apps`, `get_app`, `list_app_accounts`,
+  `connect_app` (magic-link connect flow).
+- **Inbox authorization**: `inbox(id).authorize(AuthorizeInbox)` completes the
+  browser flow and mints a scoped API key.
+- **Agent**: `agent_attach_human` emails a claim link connecting a human.
+- **Metrics**: `get_metrics_rates` (bounce/complaint rates) at all three
+  scopes; `MetricsQuery::window`.
+- **API keys**: `get_api_key` (org scope) and `update_api_key` (all scopes);
+  the model now covers bearer and public-key credentials
+  (`key_type`, `permissions`, `expires_at`, `status`, `public_key`, `created_by`).
+- **Inbox search**: `search_inboxes` (+ `list_all_matching_inboxes`) at org
+  and pod scopes.
+- **Webhook custom headers**: `get_webhook_headers` / `update_webhook_headers`
+  at all scopes, `headers` on `CreateWebhook`, `enabled` on `UpdateWebhook`.
+- **Domains**: `get_domain_setup_link` (org scope), `inbound_enabled` /
+  `tracking_enabled` / `reason`, `allow_conflicting_provider` on create;
+  `VerificationRecord::reason`.
+- `Message` gains the current spec fields: `reply_to`, `cc`, `bcc`, `headers`,
+  `in_reply_to`, `references`, `size`, `created_at`, `updated_at`,
+  `extracted_text`, `extracted_html`, `calendar_event_id`, `highlights`.
+- `SendMessage` / `ReplyToMessage` gain `track_opens` (and reply gains `to`
+  and `reply_all`); `Inbox` gains `status`, `metadata`, `updated_at` (create /
+  update accept `status`); `Organization` gains billing/authentication ids;
+  `ListEntry` gains `direction`, `list_type`, `pod_id`, `inbox_id`;
+  `Draft` gains `preview`, `send_status`, `client_id`, `references`,
+  `reply_to`; `UpdateDraft` gains `reply_to` and
+  `add_attachments` / `remove_attachments`; `Attachment` gains `text_url`;
+  `Webhook` gains `pod_id` / `inbox_id`.
+- Weekly **drift checker**: `scripts/drift_check.py` diffs the live
+  [OpenAPI spec](https://docs.agentmail.to/openapi.json) against the surface
+  this crate binds; `.github/workflows/drift.yml` runs it Mondays and opens
+  an issue on drift. `scripts/upstream_pin.json` pins the upstream commit the
+  crate was built against.
+
+### Changed (breaking)
+
+- `AgentSignup::human_email` is now `Option<String>` (the API creates the
+  inbox without a human when it is omitted; attach one later with
+  `agent_attach_human`).
+- `ApiKey::permissions` and `CreateApiKey::permissions` are now
+  `Option<BTreeMap<String, bool>>` (were `serde_json::Value`) so permission
+  additions don't need a client release.
+- `Draft` no longer has `from` or `reply_all`: the spec's draft schema never
+  returns them, so they never populated.
+- `AgentVerifyResult` unchanged; `agent_verify` still posts `otp_code`.
+
 ## [0.3.0] - 2026-07-16
 
 Full three-scope coverage of the AgentMail API v0 (organization, inbox, pod),

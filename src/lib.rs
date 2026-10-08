@@ -36,10 +36,18 @@
 //!
 //! # Coverage
 //!
-//! Inboxes, threads, messages (send/reply/forward/raw/batch), drafts,
-//! attachments, webhooks, domains, pods, allow/block lists, metrics, inbox
-//! events, API keys, organization, auth, and agent onboarding. Every list call
-//! is paginated (`Page`), and requests carry automatic retries with backoff.
+//! Inboxes (incl. search and authorization), threads, messages
+//! (send/reply/forward/raw/batch, open tracking), drafts (incl. attachment
+//! deltas), attachments, webhooks (incl. custom delivery headers), domains
+//! (incl. provider setup links), pods, allow/block lists, metrics
+//! (events/usage/rates), inbox events, calendars, accounts, apps, API keys
+//! (bearer and public-key), organization, auth, and agent onboarding. Every
+//! list call is paginated (`Page`), and requests carry automatic retries with
+//! backoff.
+//!
+//! Not bound: the official SDKs' **WebSocket / realtime** stream
+//! (`client.websockets` in agentmail-python) — it needs a websocket client
+//! dependency; the REST surface here is complete without it.
 //!
 //! # Features
 //!

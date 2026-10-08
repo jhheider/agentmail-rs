@@ -216,14 +216,14 @@ def main():
     if len(bound) < 100:
         print(
             f"extraction failed: found only {len(bound)} bound operations in "
-            "src/client — the crate-surface extractor is broken",
+            "src/client: the crate-surface extractor is broken",
             file=sys.stderr,
         )
         return 2
     if len(upstream) < 100:
         print(
             f"spec parse failed: only {len(upstream)} operations in the "
-            "OpenAPI document — wrong file or format change",
+            "OpenAPI document: wrong file or format change",
             file=sys.stderr,
         )
         return 2

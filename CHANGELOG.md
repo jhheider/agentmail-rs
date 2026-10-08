@@ -5,6 +5,27 @@ All notable changes to this crate are documented here. The format follows
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 API v0 upstream is pre-1.0; expect breaking releases while it settles.
 
+## [0.4.1] - 2026-10-08
+
+### Added
+
+- The official SDKs' **WebSocket / realtime** event stream, behind the new
+  off-by-default `websockets` feature: `Client::connect_realtime` opens the
+  stream, sends the `subscribe` filter (event types, inboxes, pods), and
+  returns a `RealtimeStream` whose `next_event` yields typed
+  `RealtimeEvent`s for all 14 event types (message received/sent/delivered/
+  opened/bounced/complained/rejected, domain verified, calendar
+  created/updated/deleted/starting/ending/responded) plus `Subscribed`,
+  `Other` (unknown frames survive as raw JSON), `Binary`, and `Closed`.
+  Unknown event types decode as `Other` instead of failing, so additions
+  don't break readers. No automatic reconnection, matching the SDKs.
+  Dependencies (`tokio-tungstenite` on rustls + webpki roots, `futures-util`)
+  are optional and only compile with the feature.
+- The websocket host is derived from the API host by swapping the `api` DNS
+  label for `ws` (`api.agentmail.to` -> `ws.agentmail.to`, EU:
+  `ws.agentmail.eu`), overridable via `AGENTMAIL_WEBSOCKET_URL` (with
+  `from_env`) or `Client::with_websocket_url`.
+
 ## [0.4.0] - 2026-10-07
 
 Catches up with ~3 months of upstream drift (the API spec is now `1.0.0` and

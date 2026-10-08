@@ -31,6 +31,8 @@ for agents, with **full coverage of the AgentMail REST API** at every scope:
 - **Pods**, **allow/block lists**, **metrics** (events + usage + rates),
   **inbox events**, **API keys** (bearer and public-key), **organization**,
   and **agent** sign-up / verify / attach-human
+- **Realtime** (optional `websockets` feature): the SDKs' WebSocket event
+  stream (`connect_realtime`), for agents without a public webhook URL
 - **Pagination** on every list call, `list_all_*` helpers that drain it, and
   **automatic retries** with exponential backoff
 
@@ -144,11 +146,12 @@ the typed scope handles above: inboxes, threads, messages, drafts,
 attachments, webhooks, domains, pods, allow/block lists, metrics, calendars,
 accounts, apps, API keys, organization, auth, and agent onboarding.
 
-One known gap: the official SDKs' **WebSocket / realtime** event stream
-(`client.websockets` in agentmail-python) is not bound here because it needs a
-websocket client dependency; file an issue if you want it. Extras beyond the
-SDKs: the Svix **webhook signature verification** helper (behind the
-`webhook-verify` feature) and the `list_all_*` helpers that drain pagination.
+The official SDKs' **WebSocket / realtime** event stream is also bound here,
+behind the off-by-default `websockets` feature: `connect_realtime` yields
+typed events (`message.received`, bounces, opens, calendar activity, ...)
+without needing a public webhook URL. Extras beyond the SDKs: the Svix
+**webhook signature verification** helper (behind `webhook-verify`) and the
+`list_all_*` helpers that drain pagination.
 
 ### Tracking upstream drift
 

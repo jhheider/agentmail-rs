@@ -1,6 +1,6 @@
 [package]
 name = "agentmail-rs"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2024"
 # Floor set by edition 2024 (1.85) and icu/idna transitive deps (1.86).
 rust-version = "1.86"
@@ -29,6 +29,10 @@ retries = ["dep:tokio"]
 # default so the base client needs no crypto beyond rustls's ring provider;
 # enabling it adds a direct ring + base64 dependency.
 webhook-verify = ["dep:ring", "dep:base64"]
+# Realtime inbox events over WebSocket (connect_realtime). Off by default;
+# adds tokio-tungstenite (rustls, webpki roots) and futures-util, and makes
+# the direct tokio dependency unconditional.
+websockets = ["dep:tokio", "dep:tokio-tungstenite", "dep:futures-util"]
 
 [dependencies]
 # rustls with the ring provider, no aws-lc-rs / cmake C build. The client
@@ -49,15 +53,31 @@ tokio = { version = "1", default-features = false, features = ["time"], optional
 # so this adds no new C toolchain; base64 has no transitive deps.
 ring = { version = "0.17", optional = true }
 base64 = { version = "0.22", optional = true }
+# websockets only. rustls + webpki roots (no OpenSSL, no system store), which
+# pairs with the ring provider Client::new installs process-wide.
+tokio-tungstenite = { version = "0.30", default-features = false, features = [
+    "connect",
+    "rustls-tls-webpki-roots",
+], optional = true }
+futures-util = { version = "0.3", default-features = false, features = [
+    "sink",
+], optional = true }
 
 [dev-dependencies]
-tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net"] }
 wiremock = "0.6"
+# Local ws server for the realtime tests (mirrors the feature dependency).
+tokio-tungstenite = "0.30"
 
 # The webhook example needs the verification helpers.
 [[example]]
 name = "webhook"
 required-features = ["webhook-verify"]
+
+# Realtime tests run a local ws server (no TLS) and need the feature.
+[[test]]
+name = "realtime"
+required-features = ["websockets"]
 
 [package.metadata.docs.rs]
 all-features = true

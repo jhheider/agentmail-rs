@@ -45,9 +45,9 @@
 //! list call is paginated (`Page`), and requests carry automatic retries with
 //! backoff.
 //!
-//! Not bound: the official SDKs' **WebSocket / realtime** stream
-//! (`client.websockets` in agentmail-python), which needs a websocket client
-//! dependency; the REST surface here is complete without it.
+//! Not bound as REST: the official SDKs' **WebSocket / realtime** event
+//! stream is bound behind the `websockets` feature (see
+//! [`RealtimeStream`]); the REST surface here is complete without it.
 //!
 //! # Features
 //!
@@ -57,6 +57,10 @@
 //! - **`webhook-verify`** (off by default): `verify_webhook_signature` for
 //!   Svix-signed webhook deliveries. Adds `ring` (already the rustls provider)
 //!   and `base64`.
+//! - **`websockets`** (off by default): [`Client::connect_realtime`] for the
+//!   realtime event stream, so agents without a public webhook URL can
+//!   receive mail. Adds `tokio-tungstenite` (rustls, webpki roots) and
+//!   `futures-util`; see the [`RealtimeStream`] type.
 
 #![warn(missing_docs)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
@@ -65,9 +69,14 @@ mod client;
 mod types;
 mod util;
 
+#[cfg(feature = "websockets")]
+mod realtime;
 #[cfg(feature = "webhook-verify")]
 mod verify;
 
+#[cfg(feature = "websockets")]
+#[cfg_attr(docsrs, doc(cfg(feature = "websockets")))]
+pub use realtime::*;
 pub use types::*;
 #[cfg(feature = "webhook-verify")]
 #[cfg_attr(docsrs, doc(cfg(feature = "webhook-verify")))]
@@ -88,6 +97,11 @@ pub const DEFAULT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(
 /// Everything that can go wrong talking to AgentMail.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    /// A websocket-level failure on the realtime stream.
+    #[cfg(feature = "websockets")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "websockets")))]
+    #[error("websocket error: {0}")]
+    Realtime(String),
     /// [`Client::from_env`] found no `AGENTMAIL_API_KEY`.
     #[error("AGENTMAIL_API_KEY is not set")]
     MissingApiKey,
@@ -154,6 +168,8 @@ pub struct Client {
     api_key: String,
     #[cfg(feature = "retries")]
     retry_policy: RetryPolicy,
+    #[cfg(feature = "websockets")]
+    ws_url_override: Option<String>,
 }
 
 // Manual impl so an accidental `{:?}` never prints the API key.
@@ -186,6 +202,8 @@ impl Client {
             api_key: api_key.into(),
             #[cfg(feature = "retries")]
             retry_policy: RetryPolicy::default(),
+            #[cfg(feature = "websockets")]
+            ws_url_override: None,
         }
     }
 
@@ -194,7 +212,12 @@ impl Client {
         let key = std::env::var("AGENTMAIL_API_KEY").map_err(|_| Error::MissingApiKey)?;
         let base =
             std::env::var("AGENTMAIL_BASE_URL").unwrap_or_else(|_| DEFAULT_BASE_URL.to_string());
-        Ok(Self::new(key, base))
+        let mut client = Self::new(key, base);
+        #[cfg(feature = "websockets")]
+        if let Ok(url) = std::env::var("AGENTMAIL_WEBSOCKET_URL") {
+            client.ws_url_override = Some(url.trim_end_matches('/').to_string());
+        }
+        Ok(client)
     }
 
     /// Replace the [`RetryPolicy`]. Set `max_retries` to `0` to disable retries.

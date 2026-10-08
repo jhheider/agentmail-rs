@@ -210,6 +210,24 @@ def main():
 
     bound = crate_surface()
     upstream = spec_ops(spec)
+
+    # Vacuous-green guard: a silently broken extractor (regex drift, repo
+    # reorg) once reported "0 extra" with 6 ops bound. Refuse to certify.
+    if len(bound) < 100:
+        print(
+            f"extraction failed: found only {len(bound)} bound operations in "
+            "src/client — the crate-surface extractor is broken",
+            file=sys.stderr,
+        )
+        return 2
+    if len(upstream) < 100:
+        print(
+            f"spec parse failed: only {len(upstream)} operations in the "
+            "OpenAPI document — wrong file or format change",
+            file=sys.stderr,
+        )
+        return 2
+
     missing = sorted(upstream - bound)
     stale = sorted(bound - upstream)
 

@@ -140,12 +140,12 @@ cargo run --example webhook --features webhook-verify
 
 This crate binds the **entire AgentMail API** the official Python/TypeScript
 SDKs expose over REST, at **all three scopes** (organization, inbox, pod) via
-the typed scope handles above — inboxes, threads, messages, drafts,
+the typed scope handles above: inboxes, threads, messages, drafts,
 attachments, webhooks, domains, pods, allow/block lists, metrics, calendars,
 accounts, apps, API keys, organization, auth, and agent onboarding.
 
 One known gap: the official SDKs' **WebSocket / realtime** event stream
-(`client.websockets` in agentmail-python) is not bound here — it needs a
+(`client.websockets` in agentmail-python) is not bound here because it needs a
 websocket client dependency; file an issue if you want it. Extras beyond the
 SDKs: the Svix **webhook signature verification** helper (behind the
 `webhook-verify` feature) and the `list_all_*` helpers that drain pagination.

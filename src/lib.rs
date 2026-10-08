@@ -46,7 +46,7 @@
 //! backoff.
 //!
 //! Not bound: the official SDKs' **WebSocket / realtime** stream
-//! (`client.websockets` in agentmail-python) — it needs a websocket client
+//! (`client.websockets` in agentmail-python), which needs a websocket client
 //! dependency; the REST surface here is complete without it.
 //!
 //! # Features

@@ -282,3 +282,95 @@ async fn list_all_messages_drains_pages() {
     assert_eq!(all[0].message_id, "m1");
     assert_eq!(all[1].message_id, "m2");
 }
+
+#[tokio::test]
+async fn create_agent_armor_feedback_posts_value() {
+    let (server, client) = client().await;
+    Mock::given(method("POST"))
+        .and(path("/v0/inboxes/ib_1/messages/m1/agent-armor/feedback"))
+        .and(body_json(serde_json::json!({
+            "feedback": "incorrect_review",
+            "notes": "verified sender"
+        })))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "feedback_id": "fb_1",
+            "feedback": "incorrect_review",
+            "actor": { "kind": "api_key", "api_key_id": "key_1" },
+            "original_verdict": "review",
+            "model": "armor-1",
+            "created_at": "2026-01-01T00:00:00Z"
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let fb = client
+        .inbox("ib_1")
+        .create_agent_armor_feedback(
+            "m1",
+            agentmail::CreateAgentArmorFeedback {
+                feedback: agentmail::AgentArmorFeedbackValue::IncorrectReview,
+                notes: Some("verified sender".into()),
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(fb.feedback_id, "fb_1");
+    assert_eq!(
+        fb.feedback,
+        agentmail::AgentArmorFeedbackValue::IncorrectReview
+    );
+    assert_eq!(
+        fb.original_verdict,
+        Some(agentmail::AgentArmorVerdict::Review)
+    );
+    assert_eq!(
+        fb.actor.as_ref().unwrap().api_key_id.as_deref(),
+        Some("key_1")
+    );
+}
+
+#[tokio::test]
+async fn message_decodes_agent_armor_states() {
+    let (server, client) = client().await;
+    Mock::given(method("GET"))
+        .and(path("/v0/inboxes/ib_1/messages/m1"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "message_id": "m1",
+            "agent_armor": {
+                "status": "complete",
+                "verdict": "review",
+                "reason": "credential phishing pattern",
+                "model": "armor-1",
+                "completed_at": "2026-01-01T00:00:30Z"
+            }
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let msg = client.inbox("ib_1").get_message("m1").await.unwrap();
+    let armor = msg.agent_armor.unwrap();
+    assert_eq!(armor.status.as_deref(), Some("complete"));
+    assert_eq!(armor.verdict, Some(agentmail::AgentArmorVerdict::Review));
+
+    Mock::given(method("GET"))
+        .and(path("/v0/inboxes/ib_1/messages/m2"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "message_id": "m2",
+            "agent_armor": {
+                "status": "unavailable",
+                "unavailable_reason": "payload_too_large"
+            }
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let msg = client.inbox("ib_1").get_message("m2").await.unwrap();
+    let armor = msg.agent_armor.unwrap();
+    assert_eq!(
+        armor.unavailable_reason,
+        Some(agentmail::AgentArmorUnavailableReason::PayloadTooLarge)
+    );
+}

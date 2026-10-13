@@ -13,4 +13,29 @@ impl Client {
         )
         .await
     }
+
+    /// GET /v0/organizations/labs, the organization's AgentMail Labs
+    /// enrollment. Labs features are offered in US production only; `enabled`
+    /// says whether this organization has joined.
+    pub async fn get_labs(&self) -> Result<OrganizationLabs, Error> {
+        self.request(
+            reqwest::Method::GET,
+            "/v0/organizations/labs",
+            &[],
+            None::<&NoBody>,
+        )
+        .await
+    }
+
+    /// POST /v0/organizations/labs, join AgentMail Labs. Responds with the
+    /// updated enrollment.
+    pub async fn join_labs(&self) -> Result<OrganizationLabs, Error> {
+        self.request(
+            reqwest::Method::POST,
+            "/v0/organizations/labs",
+            &[],
+            None::<&NoBody>,
+        )
+        .await
+    }
 }

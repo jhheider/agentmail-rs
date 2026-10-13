@@ -258,4 +258,26 @@ impl Scoped<'_, InboxScope<'_>> {
             )
             .await
     }
+
+    /// POST `/v0/inboxes/{inbox_id}/messages/{message_id}/agent-armor/feedback`,
+    /// tell AgentMail what you think of Agent Armor's verdict on a message
+    /// (see [`Message::agent_armor`]).
+    pub async fn create_agent_armor_feedback(
+        &self,
+        message_id: &str,
+        feedback: CreateAgentArmorFeedback,
+    ) -> Result<AgentArmorFeedback, Error> {
+        self.client
+            .request(
+                reqwest::Method::POST,
+                &format!(
+                    "{}/messages/{}/agent-armor/feedback",
+                    self.base(),
+                    urlish(message_id)
+                ),
+                &[],
+                Some(&feedback),
+            )
+            .await
+    }
 }

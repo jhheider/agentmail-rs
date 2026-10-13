@@ -100,3 +100,96 @@ async fn get_and_update_webhook_headers() {
         .await
         .unwrap();
 }
+
+#[tokio::test]
+async fn polling_webhook_round_trip() {
+    let (server, client) = client().await;
+    Mock::given(method("POST"))
+        .and(path("/v0/webhooks/polling"))
+        .and(body_json(serde_json::json!({
+            "client_id": "ref-1",
+            "event_types": ["message.received"],
+            "inbox_ids": ["ib_1"]
+        })))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "webhook_id": "pwh_1",
+            "client_id": "ref-1",
+            "event_types": ["message.received"],
+            "inbox_ids": ["ib_1"],
+            "pod_ids": [],
+            "updated_at": "2026-01-01T00:00:00Z",
+            "created_at": "2026-01-01T00:00:00Z",
+            "token": "pwtok_secret"
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let created = client
+        .org()
+        .create_polling_webhook(agentmail::CreatePollingWebhook {
+            client_id: "ref-1".into(),
+            event_types: vec!["message.received".into()],
+            inbox_ids: vec!["ib_1".into()],
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+    assert_eq!(created.webhook.webhook_id, "pwh_1");
+    assert_eq!(created.token, "pwtok_secret");
+
+    Mock::given(method("GET"))
+        .and(path("/v0/webhooks/polling/ref-1"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "webhook_id": "pwh_1",
+            "client_id": "ref-1",
+            "event_types": ["message.received"],
+            "inbox_ids": ["ib_1"],
+            "pod_ids": []
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let wh = client.org().get_polling_webhook("ref-1").await.unwrap();
+    assert_eq!(wh.client_id, "ref-1");
+    assert_eq!(wh.event_types, vec!["message.received"]);
+
+    Mock::given(method("DELETE"))
+        .and(path("/v0/webhooks/polling/pwh_1"))
+        .respond_with(ResponseTemplate::new(204))
+        .expect(1)
+        .mount(&server)
+        .await;
+    client.org().delete_polling_webhook("pwh_1").await.unwrap();
+}
+
+#[tokio::test]
+async fn list_polling_webhooks_decodes_list_shape() {
+    let (server, client) = client().await;
+    Mock::given(method("GET"))
+        .and(path("/v0/webhooks/polling"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "count": 1,
+            "polling_webhooks": [{
+                "webhook_id": "pwh_1",
+                "client_id": "ref-1",
+                "event_types": ["message.bounced"]
+            }],
+            "limit": 25
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let list = client
+        .org()
+        .list_polling_webhooks(agentmail::Page {
+            limit: None,
+            page_token: None,
+        })
+        .await
+        .unwrap();
+    assert_eq!(list.count, 1);
+    assert_eq!(list.polling_webhooks[0].webhook_id, "pwh_1");
+    assert!(list.next_page_token.is_none());
+}

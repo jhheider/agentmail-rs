@@ -229,6 +229,10 @@ pub struct Message {
     /// Calendar event attached to the message, when it carries an invite.
     #[serde(default)]
     pub calendar_event_id: Option<String>,
+    /// Agent Armor security analysis of the message, when the feature is
+    /// enabled for the organization (see [`AgentArmorResult`]).
+    #[serde(default)]
+    pub agent_armor: Option<AgentArmorResult>,
     /// Total message size in bytes.
     #[serde(default)]
     pub size: Option<u64>,
@@ -308,4 +312,139 @@ impl MessageListFilters {
             .many("subject", &self.subject)
             .build()
     }
+}
+
+/// Agent Armor's verdict on a message, from [`AgentArmorResult::verdict`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum AgentArmorVerdict {
+    /// No threat found.
+    Clear,
+    /// Flagged for human review.
+    Review,
+    /// A verdict this client version does not recognize.
+    #[serde(other)]
+    Unknown,
+}
+
+/// Why Agent Armor could not analyze a message, from
+/// [`AgentArmorResult::unavailable_reason`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AgentArmorUnavailableReason {
+    /// The sender domain is not a deliverable DNS domain.
+    UnsupportedDsn,
+    /// The message exceeded the analysis size limit.
+    PayloadTooLarge,
+    /// No content the scorer can read (empty or image-only).
+    NoScannableContent,
+    /// The analysis queue rejected the job.
+    EnqueueFailed,
+    /// The scoring model failed.
+    ScorerFailed,
+    /// The model's answer violated the result contract.
+    ContractError,
+    /// Analysis did not finish within its deadline.
+    DeadlineExceeded,
+    /// A reason this client version does not recognize.
+    #[serde(other)]
+    Unknown,
+}
+
+/// Agent Armor security analysis attached to a [`Message`], when the
+/// organization has the feature enabled. While analysis is running only
+/// `status` and the pending timestamps are set; afterwards exactly one of
+/// `verdict` (with `reason` and `model`) or `unavailable_reason` is set.
+#[derive(Clone, Debug, Deserialize)]
+pub struct AgentArmorResult {
+    /// `pending`, `complete`, or `unavailable`.
+    #[serde(default)]
+    pub status: Option<String>,
+    /// When analysis started (RFC 3339; pending results).
+    #[serde(default)]
+    pub started_at: Option<String>,
+    /// When analysis times out (RFC 3339; pending results).
+    #[serde(default)]
+    pub deadline_at: Option<String>,
+    /// The verdict (complete results).
+    #[serde(default)]
+    pub verdict: Option<AgentArmorVerdict>,
+    /// Why the model flagged the message for review (complete results).
+    #[serde(default)]
+    pub reason: Option<String>,
+    /// The scoring model that produced the verdict (complete results).
+    #[serde(default)]
+    pub model: Option<String>,
+    /// When analysis finished (RFC 3339; complete results).
+    #[serde(default)]
+    pub completed_at: Option<String>,
+    /// Why analysis produced no verdict (unavailable results).
+    #[serde(default)]
+    pub unavailable_reason: Option<AgentArmorUnavailableReason>,
+}
+
+/// What you think of an Agent Armor verdict, for
+/// `create_agent_armor_feedback`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AgentArmorFeedbackValue {
+    /// The `review` verdict was correct.
+    CorrectReview,
+    /// The `review` verdict was wrong; the message is fine.
+    IncorrectReview,
+    /// A threat got through without a `review` verdict.
+    MissedThreat,
+    /// The message was legitimate agent instruction, flagged anyway.
+    LegitimateAgentInstruction,
+    /// Spam or phishing.
+    SpamOrPhishing,
+    /// A value this client version does not recognize.
+    #[serde(other)]
+    Unknown,
+}
+
+/// Request body for `create_agent_armor_feedback`.
+#[derive(Clone, Debug, Serialize)]
+pub struct CreateAgentArmorFeedback {
+    /// Your assessment of the verdict.
+    pub feedback: AgentArmorFeedbackValue,
+    /// Free-form context for the AgentMail team.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notes: Option<String>,
+}
+
+/// Who left Agent Armor feedback: an API key or the console. The oneOf is
+/// modeled flat; exactly one of the fields past `kind` is set.
+#[derive(Clone, Debug, Deserialize)]
+pub struct AgentArmorFeedbackActor {
+    /// `api_key` or `console`.
+    #[serde(default)]
+    pub kind: Option<String>,
+    /// The API key that submitted the feedback (api_key actors).
+    #[serde(default)]
+    pub api_key_id: Option<String>,
+}
+
+/// A feedback submission, from `create_agent_armor_feedback`.
+#[derive(Clone, Debug, Deserialize)]
+pub struct AgentArmorFeedback {
+    /// Unique feedback id.
+    pub feedback_id: String,
+    /// The submitted assessment.
+    pub feedback: AgentArmorFeedbackValue,
+    /// Free-form context, when provided.
+    #[serde(default)]
+    pub notes: Option<String>,
+    /// Who submitted the feedback.
+    #[serde(default)]
+    pub actor: Option<AgentArmorFeedbackActor>,
+    /// The verdict the feedback is about.
+    #[serde(default)]
+    pub original_verdict: Option<AgentArmorVerdict>,
+    /// The scoring model that produced that verdict.
+    #[serde(default)]
+    pub model: Option<String>,
+    /// Timestamp the feedback was submitted (RFC 3339).
+    #[serde(default)]
+    pub created_at: Option<String>,
 }

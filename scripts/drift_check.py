@@ -224,7 +224,13 @@ def _check(args):
     if args.spec:
         spec = json.loads(Path(args.spec).read_text())
     else:
-        with urllib.request.urlopen(SPEC_URL, timeout=60) as resp:
+        # The docs site 403s urllib's default Python-urllib User-Agent (at
+        # least from GitHub runner IPs), which is what turned the weekly run
+        # into an empty report in the first place.
+        req = urllib.request.Request(
+            SPEC_URL, headers={"User-Agent": "agentmail-rs-drift-check/0.1"}
+        )
+        with urllib.request.urlopen(req, timeout=60) as resp:
             spec = json.loads(resp.read())
 
     bound = crate_surface()

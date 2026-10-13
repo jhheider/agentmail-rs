@@ -40,3 +40,18 @@ pub struct Organization {
     #[serde(default)]
     pub created_at: Option<String>,
 }
+
+/// The organization's AgentMail Labs enrollment, from `get_labs` and
+/// `join_labs`. Labs features are offered in US production deployments only.
+#[derive(Clone, Debug, Deserialize)]
+pub struct OrganizationLabs {
+    /// Whether the organization has joined Labs.
+    pub enabled: bool,
+    /// When the organization joined (RFC 3339).
+    #[serde(default)]
+    pub enabled_at: Option<String>,
+    /// Whether Labs is offered in this deployment; `false` means joining is
+    /// not possible (for example outside US production).
+    #[serde(default)]
+    pub available: bool,
+}

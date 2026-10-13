@@ -294,3 +294,34 @@ async fn agent_sign_up_and_verify() {
     assert_eq!(signup.api_key, "am_new");
     assert!(client.agent_verify("123456").await.unwrap().verified);
 }
+
+#[tokio::test]
+async fn organization_labs_get_and_join() {
+    let (server, client) = client().await;
+    Mock::given(method("GET"))
+        .and(path("/v0/organizations/labs"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "enabled": false, "enabled_at": null, "available": true
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let labs = client.get_labs().await.unwrap();
+    assert!(!labs.enabled);
+    assert!(labs.available);
+    assert!(labs.enabled_at.is_none());
+
+    Mock::given(method("POST"))
+        .and(path("/v0/organizations/labs"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "enabled": true, "enabled_at": "2026-01-01T00:00:00Z", "available": true
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let labs = client.join_labs().await.unwrap();
+    assert!(labs.enabled);
+    assert_eq!(labs.enabled_at.as_deref(), Some("2026-01-01T00:00:00Z"));
+}

@@ -9,9 +9,11 @@ drift; so are bound operations the spec removed. Run weekly in CI
     python3 scripts/drift_check.py                 # fetch live spec, print report
     python3 scripts/drift_check.py --check         # exit 1 on drift
     python3 scripts/drift_check.py --spec file.json
+    python3 scripts/drift_check.py --report out.md # write the report to a file
 """
 
 import argparse
+import contextlib
 import json
 import re
 import sys
@@ -200,8 +202,25 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--spec", default=None, help="path to openapi.json (default: fetch live)")
     ap.add_argument("--check", action="store_true", help="exit 1 when drift is found")
+    ap.add_argument(
+        "--report",
+        default=None,
+        metavar="FILE",
+        help="write the report to FILE instead of stdout",
+    )
     args = ap.parse_args()
 
+    # One fetch, one verdict: the report file and the exit code always come
+    # from the same run, so CI can post exactly the report it just checked.
+    # (Teeing a separate print run once posted an empty report when that
+    # run's fetch crashed while the --check run succeeded.)
+    if args.report:
+        with open(args.report, "w") as fh, contextlib.redirect_stdout(fh):
+            return _check(args)
+    return _check(args)
+
+
+def _check(args):
     if args.spec:
         spec = json.loads(Path(args.spec).read_text())
     else:

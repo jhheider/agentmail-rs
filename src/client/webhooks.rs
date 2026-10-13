@@ -120,4 +120,82 @@ impl<S: Webhooks> Scoped<'_, S> {
             )
             .await
     }
+
+    /// POST `{scope}/webhooks/polling`, create a polling webhook: events are
+    /// fetched by your client (over the realtime websocket feed or a polling
+    /// endpoint) instead of pushed to a URL. The response carries the polling
+    /// `token` exactly once; store it. `client_id` is the idempotency key:
+    /// creating again with the same value returns the existing subscription
+    /// and a fresh token.
+    pub async fn create_polling_webhook(
+        &self,
+        webhook: CreatePollingWebhook,
+    ) -> Result<CreatePollingWebhookResponse, Error> {
+        self.client
+            .request(
+                reqwest::Method::POST,
+                &format!("{}/webhooks/polling", self.base()),
+                &[],
+                Some(&webhook),
+            )
+            .await
+    }
+
+    /// GET `{scope}/webhooks/polling`, one page.
+    pub async fn list_polling_webhooks(&self, page: Page) -> Result<PollingWebhookList, Error> {
+        self.client
+            .request(
+                reqwest::Method::GET,
+                &format!("{}/webhooks/polling", self.base()),
+                &page.query(),
+                None::<&NoBody>,
+            )
+            .await
+    }
+
+    /// Every polling webhook, draining pagination.
+    pub async fn list_all_polling_webhooks(&self) -> Result<Vec<PollingWebhook>, Error> {
+        let mut out = Vec::new();
+        let mut token = None;
+        loop {
+            let resp = self
+                .list_polling_webhooks(Page {
+                    limit: None,
+                    page_token: token,
+                })
+                .await?;
+            let next = resp.next_page_token;
+            out.extend(resp.polling_webhooks);
+            match next {
+                Some(t) => token = Some(t),
+                None => return Ok(out),
+            }
+        }
+    }
+
+    /// GET `{scope}/webhooks/polling/{webhook_id}`. The API also accepts your
+    /// `client_id` in place of the `webhook_id`.
+    pub async fn get_polling_webhook(&self, webhook_id: &str) -> Result<PollingWebhook, Error> {
+        self.client
+            .request(
+                reqwest::Method::GET,
+                &format!("{}/webhooks/polling/{}", self.base(), urlish(webhook_id)),
+                &[],
+                None::<&NoBody>,
+            )
+            .await
+    }
+
+    /// DELETE `{scope}/webhooks/polling/{webhook_id}`. The API also accepts
+    /// your `client_id` in place of the `webhook_id`.
+    pub async fn delete_polling_webhook(&self, webhook_id: &str) -> Result<(), Error> {
+        self.client
+            .request(
+                reqwest::Method::DELETE,
+                &format!("{}/webhooks/polling/{}", self.base(), urlish(webhook_id)),
+                &[],
+                None::<&NoBody>,
+            )
+            .await
+    }
 }

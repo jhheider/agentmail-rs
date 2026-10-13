@@ -114,3 +114,83 @@ pub struct WebhookHeaderNames {
     /// The configured header names.
     pub header_names: Vec<String>,
 }
+
+/// Request body for `create_polling_webhook`. Unlike push webhooks, a
+/// polling webhook is created with your own `client_id` as its idempotency
+/// key: creating again with the same `client_id` returns the existing
+/// subscription and a fresh `token`.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct CreatePollingWebhook {
+    /// Your own idempotency key for the subscription. Required, and also
+    /// accepted in place of `webhook_id` by `get_polling_webhook` and
+    /// `delete_polling_webhook`.
+    pub client_id: String,
+    /// e.g. `["message.received"]`.
+    pub event_types: Vec<String>,
+    /// Limit delivery to these inboxes; empty means all (organization
+    /// scope only; inbox and pod scopes target the scope itself).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub inbox_ids: Vec<String>,
+    /// Limit delivery to these pods; empty means all (organization scope
+    /// only; at most 10 channels total across inboxes and pods).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub pod_ids: Vec<String>,
+}
+
+/// A polling webhook subscription, as the API returns it from
+/// `get_polling_webhook` and the list methods. Events are fetched by the
+/// client instead of pushed to a URL, so there is no `url` or `secret`.
+#[derive(Clone, Debug, Deserialize)]
+pub struct PollingWebhook {
+    /// Unique id, used to fetch or delete the subscription.
+    pub webhook_id: String,
+    /// Your idempotency key from creation, echoed back.
+    pub client_id: String,
+    /// Subscribed event types.
+    #[serde(default)]
+    pub event_types: Vec<String>,
+    /// Inboxes the subscription is limited to; empty means all.
+    #[serde(default)]
+    pub inbox_ids: Vec<String>,
+    /// Pods the subscription is limited to; empty means all.
+    #[serde(default)]
+    pub pod_ids: Vec<String>,
+    /// The pod this subscription is scoped to, when created on a pod handle.
+    #[serde(default)]
+    pub pod_id: Option<String>,
+    /// The inbox this subscription is scoped to, when created on an inbox
+    /// handle.
+    #[serde(default)]
+    pub inbox_id: Option<String>,
+    /// Timestamp the subscription was last updated (RFC 3339).
+    #[serde(default)]
+    pub updated_at: Option<String>,
+    /// Timestamp the subscription was created (RFC 3339).
+    #[serde(default)]
+    pub created_at: Option<String>,
+}
+
+/// Response from `create_polling_webhook`: the new subscription plus the
+/// polling `token`, which is returned exactly once, on creation. Store it;
+/// there is no way to read it back.
+#[derive(Clone, Debug, Deserialize)]
+pub struct CreatePollingWebhookResponse {
+    /// The created subscription.
+    #[serde(flatten)]
+    pub webhook: PollingWebhook,
+    /// Secret presented when polling for events.
+    pub token: String,
+}
+
+/// One page of polling webhook subscriptions from `list_polling_webhooks`.
+#[derive(Clone, Debug, Deserialize)]
+pub struct PollingWebhookList {
+    /// Total polling webhooks in the account (not just this page).
+    pub count: u64,
+    /// This page of polling webhooks.
+    #[serde(default)]
+    pub polling_webhooks: Vec<PollingWebhook>,
+    /// Cursor for the next page; `None` on the last page.
+    #[serde(default)]
+    pub next_page_token: Option<String>,
+}

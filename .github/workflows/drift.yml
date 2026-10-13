@@ -23,8 +23,15 @@ jobs:
       - name: Check AgentMail API drift
         id: check
         run: |
-          python3 scripts/drift_check.py | tee drift-report.md
-          if python3 scripts/drift_check.py --check >/dev/null 2>&1; then
+          set +e
+          python3 scripts/drift_check.py --report drift-report.md
+          status=$?
+          set -e
+          if [ ! -s drift-report.md ]; then
+            echo "drift check crashed before writing a report" >&2
+            exit 1
+          fi
+          if [ "$status" -eq 0 ]; then
             echo "drift=false" >> "$GITHUB_OUTPUT"
           else
             echo "drift=true" >> "$GITHUB_OUTPUT"

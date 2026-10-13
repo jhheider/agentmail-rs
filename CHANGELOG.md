@@ -5,6 +5,31 @@ All notable changes to this crate are documented here. The format follows
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 API v0 upstream is pre-1.0; expect breaking releases while it settles.
 
+## [0.5.0] - 2026-10-13
+
+### Added
+
+- **Polling webhooks** at all three scopes: `create_polling_webhook` (your
+  `client_id` is the idempotency key and the polling `token` is returned
+  exactly once), `list_polling_webhooks` / `list_all_polling_webhooks`,
+  `get_polling_webhook`, and `delete_polling_webhook` (both also accept the
+  `client_id` in place of the `webhook_id`). New types `CreatePollingWebhook`,
+  `PollingWebhook`, `CreatePollingWebhookResponse`, `PollingWebhookList`.
+- **AgentMail Labs**: `Client::get_labs` and `Client::join_labs`, with the
+  `OrganizationLabs` type (`enabled`, `enabled_at`, `available`).
+- **Agent Armor**: `Message::agent_armor` decodes the analysis result
+  (`AgentArmorResult`: pending/complete/unavailable, with `AgentArmorVerdict`
+  and `AgentArmorUnavailableReason`), and
+  `client.inbox(id).create_agent_armor_feedback` submits your assessment
+  (`CreateAgentArmorFeedback`, `AgentArmorFeedback`).
+
+### Fixed
+
+- The weekly drift workflow fetches the spec once and posts exactly the
+  report it checked (`drift_check.py --report`); two independent fetches
+  could previously post an empty issue body when the report run's fetch
+  crashed while the check run succeeded.
+
 ## [0.4.1] - 2026-10-08
 
 ### Added

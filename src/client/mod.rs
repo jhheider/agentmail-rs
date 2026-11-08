@@ -17,6 +17,7 @@ mod auth;
 mod calendar;
 mod domains;
 mod drafts;
+mod forwarding;
 mod inbox_events;
 mod inboxes;
 mod lists;

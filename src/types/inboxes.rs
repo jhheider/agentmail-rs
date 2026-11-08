@@ -1,5 +1,16 @@
 use serde::{Deserialize, Serialize};
 
+/// Inbox signature added to every sent message.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct Signature {
+    /// Plain-text signature.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text: Option<String>,
+    /// HTML signature.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub html: Option<String>,
+}
+
 /// Request body for `create_inbox`. All fields optional; the API
 /// generates a username when none is given.
 #[derive(Clone, Debug, Default, Serialize)]
@@ -22,6 +33,9 @@ pub struct CreateInbox {
     /// Arbitrary JSON stored alongside the inbox.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<serde_json::Value>,
+    /// Inbox signature added to every sent message.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub signature: Option<Signature>,
 }
 
 /// Request body for `update_inbox`. Fields left `None` are omitted
@@ -37,6 +51,9 @@ pub struct UpdateInbox {
     /// Replace the stored metadata.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<serde_json::Value>,
+    /// Replace the inbox signature (null to remove).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub signature: Option<Signature>,
 }
 /// An agent-owned inbox, as the API returns it.
 #[derive(Clone, Debug, Deserialize)]
@@ -60,6 +77,9 @@ pub struct Inbox {
     /// Arbitrary JSON stored alongside the inbox.
     #[serde(default)]
     pub metadata: Option<serde_json::Value>,
+    /// Inbox signature, when set.
+    #[serde(default)]
+    pub signature: Option<Signature>,
     /// RFC 3339 last-update timestamp.
     #[serde(default)]
     pub updated_at: Option<String>,

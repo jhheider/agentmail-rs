@@ -17,6 +17,7 @@ mod auth;
 mod calendar;
 mod domains;
 mod drafts;
+mod forwarding;
 mod inbox_events;
 mod inboxes;
 mod lists;
@@ -26,7 +27,6 @@ mod organizations;
 mod pods;
 pub(crate) mod scope;
 mod threads;
-mod forwarding;
 mod webhooks;
 
 /// A body type for the bodiless request calls (`GET`/`DELETE`). Turbofish this

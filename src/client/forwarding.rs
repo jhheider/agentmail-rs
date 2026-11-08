@@ -1,6 +1,6 @@
 use crate::client::NoBody;
 use crate::client::scope::{Forwarding, Scoped};
-use crate::{Error, types::*, util::urlish};
+use crate::{Error, types::*};
 
 impl<S: Forwarding> Scoped<'_, S> {
     /// GET `{scope}/forwarding` (org/pod/inbox).

@@ -93,6 +93,12 @@ impl Lists for OrgScope {}
 impl Lists for InboxScope<'_> {}
 impl Lists for PodScope<'_> {}
 
+/// Scopes with forwarding (org / inbox / pod).
+pub trait Forwarding: Scope {}
+impl Forwarding for OrgScope {}
+impl Forwarding for InboxScope<'_> {}
+impl Forwarding for PodScope<'_> {}
+
 /// Scopes with metrics (org / inbox / pod).
 pub trait Metrics: Scope {}
 impl Metrics for OrgScope {}

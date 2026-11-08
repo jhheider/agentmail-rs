@@ -26,6 +26,7 @@ mod organizations;
 mod pods;
 pub(crate) mod scope;
 mod threads;
+mod forwarding;
 mod webhooks;
 
 /// A body type for the bodiless request calls (`GET`/`DELETE`). Turbofish this

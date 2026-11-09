@@ -36,6 +36,7 @@ TRAIT_SCOPES = {
     "Domains": ["org", "pod"],
     "Inboxes": ["org", "pod"],
     "AccountScopes": ["inbox", "pod"],
+    "Forwarding": ["org", "inbox", "pod"],
 }
 
 # types file -> spec schema family prefixes. Shared-enum and pagination

@@ -130,7 +130,7 @@ def crate_surface():
 def impl_scopes(lines, upto):
     """Scopes the enclosing impl block binds, from its receiver."""
     for line in reversed(lines[:upto]):
-        if not line.startswith("impl"):
+        if not line.lstrip().startswith("impl"):
             continue
         if "Client" in line and "Scoped" not in line:
             return ["org"]
